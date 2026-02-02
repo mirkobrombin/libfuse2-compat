@@ -1,0 +1,6 @@
+/build/
+/tests/build/
+*.o
+*.so
+*.so.*
+compile_commands.json
