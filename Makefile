@@ -24,7 +24,7 @@ DEV_LINK := $(BUILD_DIR)/libfuse.so
 OBJECTS := $(BUILD_DIR)/bridge.o $(BUILD_DIR)/fuse3_loader.o
 
 .PHONY: all clean check check-unit check-symbols check-system check-abi \
-	install uninstall
+	check-legacy-loader check-appimage install uninstall
 
 all: $(REAL_LIB) $(SONAME_LINK) $(DEV_LINK)
 
@@ -72,6 +72,18 @@ check-system: $(TEST_BUILD_DIR)/backend_probe
 
 check-abi:
 	./tests/test_abi_layout.sh
+
+check-legacy-loader: all
+	./tests/fetch_legacy_fixture.sh
+	./tests/test_legacy_loader.sh \
+		tests/fixtures/obsolete-appimagetool-x86_64.AppImage
+
+check-appimage: all
+	@test -n "$(APPIMAGE)" || { \
+		echo 'usage: make check-appimage APPIMAGE=/path/to/legacy.AppImage' >&2; \
+		exit 2; \
+	}
+	./tests/integration_appimage.sh "$(APPIMAGE)"
 
 check: check-unit check-symbols check-system check-abi
 
