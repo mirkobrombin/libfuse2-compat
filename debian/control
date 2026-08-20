@@ -1,0 +1,18 @@
+Source: libfuse2-compat
+Section: libs
+Priority: optional
+Maintainer: Mirko Brombin <mirko@fabricators.ltd>
+Build-Depends: debhelper-compat (= 13), pkg-config, libfuse-dev, libfuse3-dev
+Standards-Version: 4.7.0
+Homepage: https://github.com/mirkobrombin/libfuse2-compat
+Rules-Requires-Root: no
+
+Package: libfuse2-compat
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libfuse3-3 | libfuse3-4
+Provides: libfuse2, libfuse2t64
+Conflicts: libfuse2, libfuse2t64
+Replaces: libfuse2, libfuse2t64
+Description: FUSE2 ABI bridge for legacy AppImages on FUSE3
+ Provides libfuse.so.2 and translates the legacy AppImageKit low-level ABI
+ to libfuse3 without requiring the deprecated FUSE2 userspace library.
