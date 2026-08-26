@@ -36,9 +36,18 @@ FUSE_2.6 {
 		fuse_daemonize;
 		fuse_lowlevel_new;
 		fuse_mount;
+		fuse_reply_lock;
 		fuse_session_remove_chan;
 		fuse_unmount;
 		fuse_version;
 	local:
 		*;
 } FUSE_2.5;
+
+FUSE_2.7 {
+} FUSE_2.6;
+
+FUSE_2.7.5 {
+	global:
+		fuse_reply_bmap;
+} FUSE_2.7;
