@@ -15,6 +15,7 @@ WARNINGS := -Wall -Wextra -Wpedantic -Wconversion -Wshadow \
 	-Wstrict-prototypes -Wmissing-prototypes -Werror=implicit-function-declaration
 COMMON_CFLAGS := -std=c11 -fPIC -fvisibility=hidden -D_GNU_SOURCE $(WARNINGS)
 LIBS := -ldl -lpthread
+LIB_HARDENING := -Wl,-z,defs -Wl,-z,relro,-z,now
 
 BUILD_DIR := build
 TEST_BUILD_DIR := tests/build
@@ -35,7 +36,7 @@ $(BUILD_DIR)/%.o: src/%.c | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(COMMON_CFLAGS) -Isrc -c $< -o $@
 
 $(REAL_LIB): $(OBJECTS) src/libfuse2-compat.map
-	$(CC) -shared $(LDFLAGS) -Wl,-soname,libfuse.so.2 \
+	$(CC) -shared $(LDFLAGS) $(LIB_HARDENING) -Wl,-soname,libfuse.so.2 \
 		-Wl,--version-script,src/libfuse2-compat.map \
 		-o $@ $(OBJECTS) $(LIBS)
 
