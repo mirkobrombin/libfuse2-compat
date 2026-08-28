@@ -22,7 +22,8 @@ expected=(
     fuse_set_signal_handlers fuse_unmount fuse_version
 )
 
-symbols=$(objdump -T "$library" | awk '$4 == ".text" { print $NF }' | sort -u)
+symbol_table=$(objdump -T "$library")
+symbols=$(awk '$4 == ".text" { print $NF }' <<<"$symbol_table" | sort -u)
 for symbol in "${expected[@]}"; do
     if ! grep -qx "$symbol" <<<"$symbols"; then
         printf 'missing exported symbol: %s\n' "$symbol" >&2
@@ -30,19 +31,19 @@ for symbol in "${expected[@]}"; do
     fi
 done
 
-if ! objdump -T "$library" | grep -q 'FUSE_2.6.*fuse_lowlevel_new'; then
+if ! grep -q 'FUSE_2.6.*fuse_lowlevel_new' <<<"$symbol_table"; then
     printf 'fuse_lowlevel_new has the wrong symbol version\n' >&2
     exit 1
 fi
-if ! objdump -T "$library" | grep -q 'FUSE_2.5.*fuse_opt_parse'; then
+if ! grep -q 'FUSE_2.5.*fuse_opt_parse' <<<"$symbol_table"; then
     printf 'fuse_opt_parse has the wrong symbol version\n' >&2
     exit 1
 fi
-if ! objdump -T "$library" | grep -q 'FUSE_2.4.*fuse_reply_err'; then
+if ! grep -q 'FUSE_2.4.*fuse_reply_err' <<<"$symbol_table"; then
     printf 'fuse_reply_err has the wrong symbol version\n' >&2
     exit 1
 fi
-if ! objdump -T "$library" | grep -q 'FUSE_2.7.5.*fuse_reply_bmap'; then
+if ! grep -q 'FUSE_2.7.5.*fuse_reply_bmap' <<<"$symbol_table"; then
     printf 'fuse_reply_bmap has the wrong symbol version\n' >&2
     exit 1
 fi
