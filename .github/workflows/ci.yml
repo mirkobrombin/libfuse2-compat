@@ -61,7 +61,11 @@ jobs:
           sudo apt-get install -y build-essential debhelper devscripts pkg-config libfuse3-dev libfuse-dev
       - name: Build Debian package
         run: dpkg-buildpackage -us -uc -b
+      - name: Collect package
+        run: |
+          mkdir -p dist
+          mv ../libfuse2-compat_*.deb dist/
       - uses: actions/upload-artifact@v4
         with:
           name: debian-package
-          path: ../libfuse2-compat_*.deb
+          path: dist/*.deb
