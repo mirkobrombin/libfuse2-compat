@@ -53,14 +53,23 @@ jobs:
 
   package:
     runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/vanilla-os/pico:latest
+      volumes:
+        - /proc:/proc
+        - /:/run/host
+      options: --privileged -it
     steps:
       - uses: actions/checkout@v4
       - name: Install packaging tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential debhelper devscripts pkg-config libfuse3-dev libfuse-dev
+          dpkg --add-architecture arm64
+          apt-get update
+          apt-get install -y build-essential debhelper devscripts pkg-config libfuse3-dev libfuse-dev crossbuild-essential-arm64 libc6:arm64
       - name: Build Debian package
-        run: dpkg-buildpackage -us -uc -b
+        run: |
+          dpkg-buildpackage -us -uc -b
+          DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -us -uc -a arm64 -b -d
       - name: Collect package
         run: |
           mkdir -p dist
