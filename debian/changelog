@@ -1,3 +1,9 @@
+libfuse2-compat (0.1.1-1) unstable; urgency=medium
+
+  * Build amd64 and arm64 Debian packages.
+
+ -- Mirko Brombin <mirko@fabricators.ltd>  Fri, 28 Aug 2026 09:58:33 +0200
+
 libfuse2-compat (0.1.0-1) unstable; urgency=medium
 
   * Initial release.

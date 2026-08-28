@@ -1,5 +1,5 @@
 Name:           libfuse2-compat
-Version:        0.1.0
+Version:        0.1.1
 Release:        1%{?dist}
 Summary:        FUSE2 ABI bridge for legacy AppImages on FUSE3
 License:        LGPL-2.1-or-later
@@ -33,5 +33,8 @@ AppImageKit low-level ABI to libfuse3.
 %{_libdir}/libfuse.so.2.9.9
 
 %changelog
+* Fri Aug 28 2026 Mirko Brombin <mirko@fabricators.ltd> - 0.1.1-1
+- Build amd64 and arm64 Debian packages
+
 * Thu Aug 27 2026 Mirko Brombin <mirko@fabricators.ltd> - 0.1.0-1
 - Initial package
