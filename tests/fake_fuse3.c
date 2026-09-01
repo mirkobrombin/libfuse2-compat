@@ -152,6 +152,7 @@ int fuse_session_loop(struct fuse3_session *session)
 	struct fuse3_conn_info conn;
 	struct fuse3_req req;
 	struct fuse3_file_info fi;
+	struct stat attr;
 
 	if (session == NULL || !session->mounted)
 		return -EIO;
@@ -183,8 +184,17 @@ int fuse_session_loop(struct fuse3_session *session)
 		session->ops.open(&req, 2, &fi);
 	fail_if(fi.fh != 99, "file_info fh was not copied back");
 	fail_if(fi.keep_cache == 0U, "file_info keep_cache was not copied back");
+	memset(&attr, 0, sizeof(attr));
+	attr.st_ino = 2;
+	attr.st_mode = S_IFREG | 0600;
+	if (session->ops.setattr != NULL)
+		session->ops.setattr(&req, 2, &attr, 1, &fi);
+	if (session->ops.readlink != NULL)
+		session->ops.readlink(&req, 2);
 	if (session->ops.read != NULL)
 		session->ops.read(&req, 2, 7, 0, &fi);
+	if (session->ops.write != NULL)
+		session->ops.write(&req, 2, "payload", 7, 0, &fi);
 	if (session->ops.release != NULL)
 		session->ops.release(&req, 2, &fi);
 

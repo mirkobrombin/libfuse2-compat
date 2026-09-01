@@ -31,6 +31,25 @@ for symbol in "${expected[@]}"; do
     fi
 done
 
+internal_symbols=(
+    fuse2_foundation_bridge_create
+    fuse2_foundation_bridge_destroy
+    fuse2_foundation_bridge_init
+    fuse2_foundation_bridge_lookup
+    fuse2_foundation_bridge_readdir
+)
+full_symbol_table=$(nm "$library")
+for symbol in "${internal_symbols[@]}"; do
+    if ! grep -Eq "[[:space:]][tT][[:space:]]${symbol}$" <<<"$full_symbol_table"; then
+        printf 'missing internal Foundation bridge symbol: %s\n' "$symbol" >&2
+        exit 1
+    fi
+done
+if grep -Eq 'fuse2_(foundation|native)_' <<<"$symbol_table"; then
+    printf 'internal Foundation bridge symbol is public\n' >&2
+    exit 1
+fi
+
 if ! grep -q 'FUSE_2.6.*fuse_lowlevel_new' <<<"$symbol_table"; then
     printf 'fuse_lowlevel_new has the wrong symbol version\n' >&2
     exit 1

@@ -7,6 +7,9 @@ on:
 permissions:
   contents: read
 
+env:
+  FOUNDATION_LANG_REF: 0d3f5426d7ae5c991c74fefb17d2b40e9c69f903
+
 jobs:
   test:
     strategy:
@@ -17,64 +20,175 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout Foundation Lang
+        uses: actions/checkout@v4
+        with:
+          repository: mirkobrombin/foundation-lang
+          ref: ${{ env.FOUNDATION_LANG_REF }}
+          path: .foundation-lang
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential clang pkg-config libfuse3-dev libfuse-dev
+          sudo apt-get install -y build-essential clang cmake ninja-build pkg-config libfuse3-dev libfuse-dev
+          wget -qO /tmp/llvm.sh https://apt.llvm.org/llvm.sh
+          chmod +x /tmp/llvm.sh
+          sudo /tmp/llvm.sh 21
+          sudo apt-get install --no-install-recommends -y llvm-21-dev
+      - name: Build Foundation Lang
+        run: |
+          cmake -S .foundation-lang -B .foundation-lang/build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
+            -DLLVM_DIR=/usr/lib/llvm-21/lib/cmake/llvm
+          cmake --build .foundation-lang/build --target foundationc --parallel 4
       - name: Build and test
         env:
           CC: ${{ matrix.compiler }}
+          FOUNDATIONC: ${{ github.workspace }}/.foundation-lang/build/foundationc
         run: make check
 
   sanitizers:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout Foundation Lang
+        uses: actions/checkout@v4
+        with:
+          repository: mirkobrombin/foundation-lang
+          ref: ${{ env.FOUNDATION_LANG_REF }}
+          path: .foundation-lang
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libfuse3-dev libfuse-dev
+          sudo apt-get install -y build-essential cmake ninja-build pkg-config libfuse3-dev libfuse-dev
+          wget -qO /tmp/llvm.sh https://apt.llvm.org/llvm.sh
+          chmod +x /tmp/llvm.sh
+          sudo /tmp/llvm.sh 21
+          sudo apt-get install --no-install-recommends -y llvm-21-dev
+      - name: Build Foundation Lang
+        run: |
+          cmake -S .foundation-lang -B .foundation-lang/build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
+            -DLLVM_DIR=/usr/lib/llvm-21/lib/cmake/llvm
+          cmake --build .foundation-lang/build --target foundationc --parallel 4
       - name: Address and undefined behavior sanitizers
         env:
           CFLAGS: -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer
           LDFLAGS: -fsanitize=address,undefined
+          FOUNDATIONC: ${{ github.workspace }}/.foundation-lang/build/foundationc
         run: make check
 
   legacy-runtime:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout Foundation Lang
+        uses: actions/checkout@v4
+        with:
+          repository: mirkobrombin/foundation-lang
+          ref: ${{ env.FOUNDATION_LANG_REF }}
+          path: .foundation-lang
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential curl fuse3
+          sudo apt-get install -y build-essential cmake curl fuse3 ninja-build
+          wget -qO /tmp/llvm.sh https://apt.llvm.org/llvm.sh
+          chmod +x /tmp/llvm.sh
+          sudo /tmp/llvm.sh 21
+          sudo apt-get install --no-install-recommends -y llvm-21-dev
+      - name: Build Foundation Lang
+        run: |
+          cmake -S .foundation-lang -B .foundation-lang/build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
+            -DLLVM_DIR=/usr/lib/llvm-21/lib/cmake/llvm
+          cmake --build .foundation-lang/build --target foundationc --parallel 4
       - name: Verify a real legacy AppImage loads the bridge
+        env:
+          FOUNDATIONC: ${{ github.workspace }}/.foundation-lang/build/foundationc
         run: make check-legacy-loader
 
   package:
-    runs-on: ubuntu-24.04
-    container:
-      image: ghcr.io/vanilla-os/pico:latest
-      volumes:
-        - /proc:/proc
-        - /:/run/host
-      options: --privileged -it
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout Foundation Lang
+        uses: actions/checkout@v4
+        with:
+          repository: mirkobrombin/foundation-lang
+          ref: ${{ env.FOUNDATION_LANG_REF }}
+          path: .foundation-lang
       - name: Install packaging tools
         run: |
-          dpkg --add-architecture arm64
-          apt-get update
-          apt-get install -y build-essential debhelper devscripts pkg-config libfuse3-dev libfuse-dev crossbuild-essential-arm64 libc6:arm64
-      - name: Build Debian package
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake debhelper devscripts ninja-build pkg-config libfuse3-dev libfuse-dev
+          wget -qO /tmp/llvm.sh https://apt.llvm.org/llvm.sh
+          chmod +x /tmp/llvm.sh
+          sudo /tmp/llvm.sh 21
+          sudo apt-get install --no-install-recommends -y llvm-21-dev
+      - name: Build Foundation Lang
         run: |
-          dpkg-buildpackage -us -uc -b
-          DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -us -uc -a arm64 -b -d
+          cmake -S .foundation-lang -B .foundation-lang/build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
+            -DLLVM_DIR=/usr/lib/llvm-21/lib/cmake/llvm
+          cmake --build .foundation-lang/build --target foundationc --parallel 4
+      - name: Build Debian package
+        env:
+          FOUNDATIONC: ${{ github.workspace }}/.foundation-lang/build/foundationc
+        run: |
+          dpkg-buildpackage -us -uc -b -d
       - name: Collect package
         run: |
           mkdir -p dist
           mv ../libfuse2-compat_*.deb dist/
       - uses: actions/upload-artifact@v4
         with:
-          name: debian-package
+          name: debian-package-${{ matrix.arch }}
           path: dist/*.deb
+
+  rpm:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout Foundation Lang
+        uses: actions/checkout@v4
+        with:
+          repository: mirkobrombin/foundation-lang
+          ref: ${{ env.FOUNDATION_LANG_REF }}
+          path: .foundation-lang
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake elfutils ninja-build pkg-config libfuse3-dev libfuse-dev rpm
+          wget -qO /tmp/llvm.sh https://apt.llvm.org/llvm.sh
+          chmod +x /tmp/llvm.sh
+          sudo /tmp/llvm.sh 21
+          sudo apt-get install --no-install-recommends -y llvm-21-dev
+      - name: Build Foundation Lang
+        run: |
+          cmake -S .foundation-lang -B .foundation-lang/build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
+            -DLLVM_DIR=/usr/lib/llvm-21/lib/cmake/llvm
+          cmake --build .foundation-lang/build --target foundationc --parallel 4
+      - name: Build RPM package
+        env:
+          FOUNDATIONC: ${{ github.workspace }}/.foundation-lang/build/foundationc
+        run: |
+          mkdir -p "$RUNNER_TEMP/rpmbuild"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
+          git archive --format=tar.gz --prefix=libfuse2-compat-0.1.1/ \
+            -o "$RUNNER_TEMP/rpmbuild/SOURCES/libfuse2-compat-0.1.1.tar.gz" HEAD
+          cp packaging/libfuse2-compat.spec "$RUNNER_TEMP/rpmbuild/SPECS/"
+          rpmbuild -bb --nodeps --define "_topdir $RUNNER_TEMP/rpmbuild" \
+            "$RUNNER_TEMP/rpmbuild/SPECS/libfuse2-compat.spec"
+          mkdir -p dist
+          cp "$RUNNER_TEMP"/rpmbuild/RPMS/*/*.rpm dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rpm-package
+          path: dist/*.rpm

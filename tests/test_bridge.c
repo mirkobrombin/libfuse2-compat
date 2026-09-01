@@ -90,6 +90,25 @@ static void legacy_getattr(fuse2_req_t req, fuse2_ino_t ino,
 	state.callbacks++;
 }
 
+static void legacy_setattr(fuse2_req_t req, fuse2_ino_t ino,
+			   struct stat *attr, int to_set,
+			   struct fuse2_file_info *fi)
+{
+	check(ino == 2 && attr != NULL && to_set == 1 && fi != NULL,
+	      "setattr conversion failed");
+	check(fi->fh == 99 && attr->st_mode == (S_IFREG | 0600),
+	      "setattr values mismatch");
+	check(fuse_reply_attr(req, attr, 1.0) == 0, "setattr reply failed");
+	state.callbacks++;
+}
+
+static void legacy_readlink(fuse2_req_t req, fuse2_ino_t ino)
+{
+	check(ino == 2, "readlink inode mismatch");
+	check(fuse_reply_readlink(req, "target") == 0, "readlink reply failed");
+	state.callbacks++;
+}
+
 static void legacy_open(fuse2_req_t req, fuse2_ino_t ino,
 			struct fuse2_file_info *fi)
 {
@@ -107,6 +126,16 @@ static void legacy_read(fuse2_req_t req, fuse2_ino_t ino, size_t size,
 	check(ino == 2 && size == 7 && off == 0 && fi->fh == 99,
 	      "read conversion failed");
 	check(fuse_reply_buf(req, "payload", 7) == 0, "reply_buf failed");
+	state.callbacks++;
+}
+
+static void legacy_write(fuse2_req_t req, fuse2_ino_t ino, const char *buf,
+			 size_t size, off_t off, struct fuse2_file_info *fi)
+{
+	check(ino == 2 && size == 7 && off == 0 && fi->fh == 99,
+	      "write conversion failed");
+	check(memcmp(buf, "payload", size) == 0, "write buffer mismatch");
+	check(fuse_reply_write(req, size) == 0, "write reply failed");
 	state.callbacks++;
 }
 
@@ -222,8 +251,11 @@ int main(void)
 	ops.lookup = legacy_lookup;
 	ops.forget = legacy_forget;
 	ops.getattr = legacy_getattr;
+	ops.setattr = legacy_setattr;
+	ops.readlink = legacy_readlink;
 	ops.open = legacy_open;
 	ops.read = legacy_read;
+	ops.write = legacy_write;
 	ops.release = legacy_release;
 	ops.opendir = legacy_opendir;
 	ops.readdir = legacy_readdir;
@@ -255,10 +287,10 @@ int main(void)
 
 	counters = backend_counters();
 	check(state.init == 1 && state.destroy == 1, "lifecycle callbacks mismatch");
-	check(state.callbacks == 13, "operation callback count mismatch");
+	check(state.callbacks == 16, "operation callback count mismatch");
 	check(counters->mounts == 1 && counters->unmounts == 1 &&
 	      counters->loops == 1, "backend lifecycle mismatch");
-	check(counters->replies == 13, "backend reply count mismatch");
+	check(counters->replies == 16, "backend reply count mismatch");
 	check(counters->failures == 0, "backend conversion checks failed");
 
 	puts("bridge unit test: ok");

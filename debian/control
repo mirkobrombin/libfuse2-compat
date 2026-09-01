@@ -2,7 +2,7 @@ Source: libfuse2-compat
 Section: libs
 Priority: optional
 Maintainer: Mirko Brombin <mirko@fabricators.ltd>
-Build-Depends: debhelper-compat (= 13), pkg-config, libfuse-dev, libfuse3-dev
+Build-Depends: debhelper-compat (= 13), foundation-lang (>= 0.1.0), pkg-config, libfuse-dev, libfuse3-dev
 Standards-Version: 4.7.0
 Homepage: https://github.com/mirkobrombin/libfuse2-compat
 Rules-Requires-Root: no

@@ -2,6 +2,7 @@ CC ?= cc
 AR ?= ar
 INSTALL ?= install
 PKG_CONFIG ?= pkg-config
+FOUNDATIONC ?= foundationc
 
 PREFIX ?= /usr/local
 LIBDIR ?= $(PREFIX)/lib
@@ -23,6 +24,9 @@ REAL_LIB := $(BUILD_DIR)/libfuse.so.2.9.9
 SONAME_LINK := $(BUILD_DIR)/libfuse.so.2
 DEV_LINK := $(BUILD_DIR)/libfuse.so
 OBJECTS := $(BUILD_DIR)/bridge.o $(BUILD_DIR)/fuse3_loader.o
+FOUNDATION_BUILD_DIR := $(BUILD_DIR)/foundation
+FOUNDATION_ARCHIVE := $(FOUNDATION_BUILD_DIR)/lib/libfuse.a
+FOUNDATION_INPUTS := foundation.package foundation.lock src/bridge.fn
 
 .PHONY: all clean check check-unit check-symbols check-system check-abi \
 	check-legacy-loader check-appimage install uninstall
@@ -35,10 +39,19 @@ $(BUILD_DIR) $(TEST_BUILD_DIR):
 $(BUILD_DIR)/%.o: src/%.c | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(COMMON_CFLAGS) -Isrc -c $< -o $@
 
-$(REAL_LIB): $(OBJECTS) src/libfuse2-compat.map
+$(BUILD_DIR)/bridge.o: src/bridge_native.h src/fuse2_exports.h src/fuse3_loader.h
+
+$(FOUNDATION_ARCHIVE): $(FOUNDATION_INPUTS) $(OBJECTS)
+	$(FOUNDATIONC) build-library . -o $(FOUNDATION_BUILD_DIR) \
+		--kind static --pic \
+		--native $(BUILD_DIR)/bridge.o \
+		--native $(BUILD_DIR)/fuse3_loader.o
+
+$(REAL_LIB): $(FOUNDATION_ARCHIVE) src/libfuse2-compat.map
 	$(CC) -shared $(LDFLAGS) $(LIB_HARDENING) -Wl,-soname,libfuse.so.2 \
 		-Wl,--version-script,src/libfuse2-compat.map \
-		-o $@ $(OBJECTS) $(LIBS)
+		-o $@ -Wl,--whole-archive $(FOUNDATION_ARCHIVE) \
+		-Wl,--no-whole-archive $(LIBS)
 
 $(SONAME_LINK): $(REAL_LIB)
 	ln -sfn $(notdir $(REAL_LIB)) $@
@@ -49,17 +62,17 @@ $(DEV_LINK): $(REAL_LIB)
 $(TEST_BUILD_DIR)/libfuse3-test.so: tests/fake_fuse3.c src/fuse3_abi.h | $(TEST_BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -std=c11 -fPIC -D_GNU_SOURCE \
 		$(filter-out -Wmissing-prototypes,$(WARNINGS)) \
-		-Isrc -shared $< -o $@
+		-Isrc $(LDFLAGS) -shared $< -o $@
 
 $(TEST_BUILD_DIR)/test_bridge: tests/test_bridge.c src/fuse2_abi.h $(SONAME_LINK) | $(TEST_BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -std=c11 $(WARNINGS) -D_GNU_SOURCE -Isrc \
 		$< -L$(BUILD_DIR) -Wl,-rpath,'$$ORIGIN/../../build' \
-		-l:libfuse.so.2.9.9 -ldl -o $@
+		$(LDFLAGS) -l:libfuse.so.2.9.9 -ldl -o $@
 
 $(TEST_BUILD_DIR)/backend_probe: tests/backend_probe.c src/fuse2_abi.h $(SONAME_LINK) | $(TEST_BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -std=c11 $(WARNINGS) -D_GNU_SOURCE -Isrc \
 		$< -L$(BUILD_DIR) -Wl,-rpath,'$$ORIGIN/../../build' \
-		-l:libfuse.so.2.9.9 -o $@
+		$(LDFLAGS) -l:libfuse.so.2.9.9 -o $@
 
 check-unit: $(TEST_BUILD_DIR)/libfuse3-test.so $(TEST_BUILD_DIR)/test_bridge
 	LIBFUSE2_COMPAT_BACKEND=$(abspath $(TEST_BUILD_DIR)/libfuse3-test.so) \

@@ -7,6 +7,9 @@ URL:            https://github.com/mirkobrombin/libfuse2-compat
 Source0:        %{name}-%{version}.tar.gz
 BuildRequires:  gcc
 BuildRequires:  make
+BuildRequires:  foundation-lang >= 0.1.0
+BuildRequires:  pkgconfig(fuse)
+BuildRequires:  pkgconfig(fuse3)
 Requires:       fuse3-libs
 Conflicts:      fuse-libs
 

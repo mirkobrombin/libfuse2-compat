@@ -1,0 +1,4 @@
+format foundation.lock/v1
+root libfuse2.compat 0.1.1
+target linux
+native c fuse 2 sha256:bf0bef1145bab05f017f45622cc58d7c17c230e3da35fc0965edce51af3053ae

@@ -7,6 +7,7 @@
 - a fake FUSE3 backend that exercises the complete AppImage lifecycle
 - callback and reply conversion checks
 - ELF SONAME and symbol-version checks
+- Foundation bridge presence and hidden native adapter symbols
 - a loader probe against the system FUSE3 library
 - header ABI checks when FUSE2/FUSE3 development headers are available
 

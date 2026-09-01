@@ -1,0 +1,10 @@
+format foundation.package/v1
+name libfuse2.compat
+version 0.1.1
+sdk ^0.1.0
+source src
+native_library c
+native_name fuse
+native_soversion 2
+native_link dl target linux
+native_link pthread target linux

@@ -1,0 +1,648 @@
+// SPDX-License-Identifier: LGPL-2.1-or-later
+package libfuse2.compat
+
+extern c fn nativeOptParse(
+    args *void,
+    data *void,
+    options *const void,
+    process extern c fn(*void, *const i8, i32, *void) i32
+) i32 as fuse2_native_opt_parse
+
+extern c fn nativeOptAddArg(
+    args *void,
+    argument *const i8
+) i32 as fuse2_native_opt_add_arg
+extern c fn nativeOptFreeArgs(args *void) void as fuse2_native_opt_free_args
+extern c fn nativeParseCommandLine(
+    args *void,
+    mountpoint **i8,
+    multithreaded *i32,
+    foreground *i32
+) i32 as fuse2_native_parse_cmdline
+extern c fn nativeDaemonize(foreground i32) i32 as fuse2_native_daemonize
+extern c fn nativeMount(
+    mountpoint *const i8,
+    args *void
+) *void as fuse2_native_mount
+extern c fn nativeLowLevelNew(
+    args *void,
+    operations *const void,
+    operationSize usize,
+    userData *void
+) *void as fuse2_native_lowlevel_new
+extern c fn nativeSessionAddChannel(
+    session *void,
+    channel *void
+) void as fuse2_native_session_add_chan
+extern c fn nativeSessionRemoveChannel(
+    channel *void
+) void as fuse2_native_session_remove_chan
+extern c fn nativeSessionLoop(session *void) i32 as fuse2_native_session_loop
+extern c fn nativeSessionDestroy(
+    session *void
+) void as fuse2_native_session_destroy
+extern c fn nativeUnmount(
+    mountpoint *const i8,
+    channel *void
+) void as fuse2_native_unmount
+extern c fn nativeSetSignalHandlers(
+    session *void
+) i32 as fuse2_native_set_signal_handlers
+extern c fn nativeRemoveSignalHandlers(
+    session *void
+) void as fuse2_native_remove_signal_handlers
+extern c fn nativeSessionExit(session *void) void as fuse2_native_session_exit
+extern c fn nativeSessionExited(
+    session *void
+) i32 as fuse2_native_session_exited
+extern c fn nativeSessionReset(session *void) void as fuse2_native_session_reset
+extern c fn nativeRequestUserData(
+    request *void
+) *void as fuse2_native_req_userdata
+extern c fn nativeReplyError(
+    request *void,
+    errorCode i32
+) i32 as fuse2_native_reply_err
+extern c fn nativeReplyNone(request *void) void as fuse2_native_reply_none
+extern c fn nativeReplyEntry(
+    request *void,
+    entry *const void
+) i32 as fuse2_native_reply_entry
+extern c fn nativeReplyAttribute(
+    request *void,
+    statValue *const void,
+    expiration f64
+) i32 as fuse2_native_reply_attr
+extern c fn nativeReplyOpen(
+    request *void,
+    info *const void
+) i32 as fuse2_native_reply_open
+extern c fn nativeReplyBuffer(
+    request *void,
+    buffer *const i8,
+    size usize
+) i32 as fuse2_native_reply_buf
+extern c fn nativeReplyReadLink(
+    request *void,
+    target *const i8
+) i32 as fuse2_native_reply_readlink
+extern c fn nativeReplyExtendedAttribute(
+    request *void,
+    count usize
+) i32 as fuse2_native_reply_xattr
+extern c fn nativeReplyWrite(
+    request *void,
+    count usize
+) i32 as fuse2_native_reply_write
+extern c fn nativeReplyFileSystem(
+    request *void,
+    value *const void
+) i32 as fuse2_native_reply_statfs
+extern c fn nativeReplyCreate(
+    request *void,
+    entry *const void,
+    info *const void
+) i32 as fuse2_native_reply_create
+extern c fn nativeReplyLock(
+    request *void,
+    lock *const void
+) i32 as fuse2_native_reply_lock
+extern c fn nativeReplyBlockMap(
+    request *void,
+    index u64
+) i32 as fuse2_native_reply_bmap
+extern c fn nativeAddDirectoryEntry(
+    request *void,
+    buffer *i8,
+    bufferSize usize,
+    name *const i8,
+    status *const void,
+    offset isize
+) usize as fuse2_native_add_direntry
+
+extern c fn foundationBridgeInit(
+    callback extern c fn(*void, *void) void,
+    userData *void,
+    connection *void
+) void as fuse2_foundation_bridge_init {
+    // SAFETY: callback and FUSE2 values are live for this call.
+    unsafe {
+        callback(userData, connection)
+    }
+}
+
+extern c fn foundationBridgeDestroy(
+    callback extern c fn(*void) void,
+    userData *void
+) void as fuse2_foundation_bridge_destroy {
+    // SAFETY: callback and userdata are live for this call.
+    unsafe {
+        callback(userData)
+    }
+}
+
+extern c fn foundationBridgeLookup(
+    callback extern c fn(*void, u64, *const i8) void,
+    request *void,
+    parent u64,
+    name *const i8
+) void as fuse2_foundation_bridge_lookup {
+    // SAFETY: callback and request values are live for this call.
+    unsafe {
+        callback(request, parent, name)
+    }
+}
+
+extern c fn foundationBridgeForget(
+    callback extern c fn(*void, u64, usize) void,
+    request *void,
+    inode u64,
+    lookupCount usize
+) void as fuse2_foundation_bridge_forget {
+    // SAFETY: callback and request values are live for this call.
+    unsafe {
+        callback(request, inode, lookupCount)
+    }
+}
+
+extern c fn foundationBridgeGetAttribute(
+    callback extern c fn(*void, u64, *void) void,
+    request *void,
+    inode u64,
+    info *void
+) void as fuse2_foundation_bridge_getattr {
+    // SAFETY: callback and converted info are live for this call.
+    unsafe {
+        callback(request, inode, info)
+    }
+}
+
+extern c fn foundationBridgeSetAttribute(
+    callback extern c fn(*void, u64, *void, i32, *void) void,
+    request *void,
+    inode u64,
+    status *void,
+    fields i32,
+    info *void
+) void as fuse2_foundation_bridge_setattr {
+    // SAFETY: callback, status, and info are live for this call.
+    unsafe {
+        callback(request, inode, status, fields, info)
+    }
+}
+
+extern c fn foundationBridgeReadLink(
+    callback extern c fn(*void, u64) void,
+    request *void,
+    inode u64
+) void as fuse2_foundation_bridge_readlink {
+    // SAFETY: callback and request are live for this call.
+    unsafe {
+        callback(request, inode)
+    }
+}
+
+extern c fn foundationBridgeOpen(
+    callback extern c fn(*void, u64, *void) void,
+    request *void,
+    inode u64,
+    info *void
+) void as fuse2_foundation_bridge_open {
+    // SAFETY: callback and converted info are live for this call.
+    unsafe {
+        callback(request, inode, info)
+    }
+}
+
+extern c fn foundationBridgeRead(
+    callback extern c fn(*void, u64, usize, isize, *void) void,
+    request *void,
+    inode u64,
+    size usize,
+    offset isize,
+    info *void
+) void as fuse2_foundation_bridge_read {
+    // SAFETY: callback, request, and info are live for this call.
+    unsafe {
+        callback(request, inode, size, offset, info)
+    }
+}
+
+extern c fn foundationBridgeWrite(
+    callback extern c fn(*void, u64, *const i8, usize, isize, *void) void,
+    request *void,
+    inode u64,
+    buffer *const i8,
+    size usize,
+    offset isize,
+    info *void
+) void as fuse2_foundation_bridge_write {
+    // SAFETY: callback, buffer, and info are live for this call.
+    unsafe {
+        callback(request, inode, buffer, size, offset, info)
+    }
+}
+
+extern c fn foundationBridgeRelease(
+    callback extern c fn(*void, u64, *void) void,
+    request *void,
+    inode u64,
+    info *void
+) void as fuse2_foundation_bridge_release {
+    // SAFETY: callback and converted info are live for this call.
+    unsafe {
+        callback(request, inode, info)
+    }
+}
+
+extern c fn foundationBridgeOpenDirectory(
+    callback extern c fn(*void, u64, *void) void,
+    request *void,
+    inode u64,
+    info *void
+) void as fuse2_foundation_bridge_opendir {
+    // SAFETY: callback and converted info are live for this call.
+    unsafe {
+        callback(request, inode, info)
+    }
+}
+
+extern c fn foundationBridgeReadDirectory(
+    callback extern c fn(*void, u64, usize, isize, *void) void,
+    request *void,
+    inode u64,
+    size usize,
+    offset isize,
+    info *void
+) void as fuse2_foundation_bridge_readdir {
+    // SAFETY: callback, request, and info are live for this call.
+    unsafe {
+        callback(request, inode, size, offset, info)
+    }
+}
+
+extern c fn foundationBridgeReleaseDirectory(
+    callback extern c fn(*void, u64, *void) void,
+    request *void,
+    inode u64,
+    info *void
+) void as fuse2_foundation_bridge_releasedir {
+    // SAFETY: callback and converted info are live for this call.
+    unsafe {
+        callback(request, inode, info)
+    }
+}
+
+extern c fn foundationBridgeFileSystemStatus(
+    callback extern c fn(*void, u64) void,
+    request *void,
+    inode u64
+) void as fuse2_foundation_bridge_statfs {
+    // SAFETY: callback and request are live for this call.
+    unsafe {
+        callback(request, inode)
+    }
+}
+
+extern c fn foundationBridgeGetExtendedAttribute(
+    callback extern c fn(*void, u64, *const i8, usize) void,
+    request *void,
+    inode u64,
+    name *const i8,
+    size usize
+) void as fuse2_foundation_bridge_getxattr {
+    // SAFETY: callback and NUL-terminated name are live for this call.
+    unsafe {
+        callback(request, inode, name, size)
+    }
+}
+
+extern c fn foundationBridgeListExtendedAttributes(
+    callback extern c fn(*void, u64, usize) void,
+    request *void,
+    inode u64,
+    size usize
+) void as fuse2_foundation_bridge_listxattr {
+    // SAFETY: callback and request are live for this call.
+    unsafe {
+        callback(request, inode, size)
+    }
+}
+
+extern c fn foundationBridgeCreate(
+    callback extern c fn(*void, u64, *const i8, u32, *void) void,
+    request *void,
+    parent u64,
+    name *const i8,
+    mode u32,
+    info *void
+) void as fuse2_foundation_bridge_create {
+    // SAFETY: callback, name, and info are live for this call.
+    unsafe {
+        callback(request, parent, name, mode, info)
+    }
+}
+
+extern c fn FuseOptParse(
+    args *void,
+    data *void,
+    options *const void,
+    process extern c fn(*void, *const i8, i32, *void) i32
+) i32 as fuse_opt_parse {
+    // SAFETY: libfuse2 owns each pointer for this call.
+    unsafe {
+        return nativeOptParse(args, data, options, process)
+    }
+}
+
+extern c fn FuseOptAddArg(
+    args *void,
+    argument *const i8
+) i32 as fuse_opt_add_arg {
+    // SAFETY: the argument vector and string are live for this call.
+    unsafe {
+        return nativeOptAddArg(args, argument)
+    }
+}
+
+extern c fn FuseOptFreeArgs(args *void) void as fuse_opt_free_args {
+    // SAFETY: libfuse2 owns the argument vector released here.
+    unsafe {
+        nativeOptFreeArgs(args)
+    }
+}
+
+extern c fn FuseParseCommandLine(
+    args *void,
+    mountpoint **i8,
+    multithreaded *i32,
+    foreground *i32
+) i32 as fuse_parse_cmdline {
+    // SAFETY: outputs follow the call-scoped FUSE2 contract.
+    unsafe {
+        return nativeParseCommandLine(
+            args,
+            mountpoint,
+            multithreaded,
+            foreground
+        )
+    }
+}
+
+extern c fn FuseDaemonize(foreground i32) i32 as fuse_daemonize {
+    nativeDaemonize(foreground)
+}
+
+extern c fn FuseVersion() i32 as fuse_version {
+    29
+}
+
+extern c fn FuseMount(mountpoint *const i8, args *void) *void as fuse_mount {
+    // SAFETY: the mountpoint is NUL-terminated and args follows the FUSE2 ABI.
+    unsafe {
+        return nativeMount(mountpoint, args)
+    }
+}
+
+extern c fn FuseLowLevelNew(
+    args *void,
+    operations *const void,
+    operationSize usize,
+    userData *void
+) *void as fuse_lowlevel_new {
+    // SAFETY: operations has operationSize readable bytes.
+    unsafe {
+        return nativeLowLevelNew(args, operations, operationSize, userData)
+    }
+}
+
+extern c fn FuseSessionAddChannel(
+    session *void,
+    channel *void
+) void as fuse_session_add_chan {
+    // SAFETY: both opaque handles originate from this compatibility library.
+    unsafe {
+        nativeSessionAddChannel(session, channel)
+    }
+}
+
+extern c fn FuseSessionRemoveChannel(
+    channel *void
+) void as fuse_session_remove_chan {
+    // SAFETY: the opaque channel originates from this compatibility library.
+    unsafe {
+        nativeSessionRemoveChannel(channel)
+    }
+}
+
+extern c fn FuseSessionLoop(session *void) i32 as fuse_session_loop {
+    // SAFETY: the opaque session originates from this compatibility library.
+    unsafe {
+        return nativeSessionLoop(session)
+    }
+}
+
+extern c fn FuseSessionDestroy(session *void) void as fuse_session_destroy {
+    // SAFETY: the opaque session is consumed by the historical destroy call.
+    unsafe {
+        nativeSessionDestroy(session)
+    }
+}
+
+extern c fn FuseUnmount(
+    mountpoint *const i8,
+    channel *void
+) void as fuse_unmount {
+    // SAFETY: channel and mountpoint are live for this call.
+    unsafe {
+        nativeUnmount(mountpoint, channel)
+    }
+}
+
+extern c fn FuseSetSignalHandlers(
+    session *void
+) i32 as fuse_set_signal_handlers {
+    // SAFETY: the opaque session originates from this compatibility library.
+    unsafe {
+        return nativeSetSignalHandlers(session)
+    }
+}
+
+extern c fn FuseRemoveSignalHandlers(
+    session *void
+) void as fuse_remove_signal_handlers {
+    // SAFETY: the opaque session originates from this compatibility library.
+    unsafe {
+        nativeRemoveSignalHandlers(session)
+    }
+}
+
+extern c fn FuseSessionExit(session *void) void as fuse_session_exit {
+    // SAFETY: the opaque session remains live during the exit request.
+    unsafe {
+        nativeSessionExit(session)
+    }
+}
+
+extern c fn FuseSessionExited(session *void) i32 as fuse_session_exited {
+    // SAFETY: the opaque session remains live during this state query.
+    unsafe {
+        return nativeSessionExited(session)
+    }
+}
+
+extern c fn FuseSessionReset(session *void) void as fuse_session_reset {
+    // SAFETY: the opaque session remains live during the reset request.
+    unsafe {
+        nativeSessionReset(session)
+    }
+}
+
+extern c fn FuseRequestUserData(request *void) *void as fuse_req_userdata {
+    // SAFETY: the opaque request remains live for the duration of its callback.
+    unsafe {
+        return nativeRequestUserData(request)
+    }
+}
+
+extern c fn FuseReplyError(request *void, errorCode i32) i32 as fuse_reply_err {
+    // SAFETY: the opaque request remains live until the reply completes.
+    unsafe {
+        return nativeReplyError(request, errorCode)
+    }
+}
+
+extern c fn FuseReplyNone(request *void) void as fuse_reply_none {
+    // SAFETY: the opaque request remains live until the reply completes.
+    unsafe {
+        nativeReplyNone(request)
+    }
+}
+
+extern c fn FuseReplyEntry(
+    request *void,
+    entry *const void
+) i32 as fuse_reply_entry {
+    // SAFETY: entry is a live FUSE2 entry for this call.
+    unsafe {
+        return nativeReplyEntry(request, entry)
+    }
+}
+
+extern c fn FuseReplyAttribute(
+    request *void,
+    statValue *const void,
+    expiration f64
+) i32 as fuse_reply_attr {
+    // SAFETY: statValue is a live stat value for this call.
+    unsafe {
+        return nativeReplyAttribute(request, statValue, expiration)
+    }
+}
+
+extern c fn FuseReplyOpen(
+    request *void,
+    info *const void
+) i32 as fuse_reply_open {
+    // SAFETY: info is a live FUSE2 file-info value for this call.
+    unsafe {
+        return nativeReplyOpen(request, info)
+    }
+}
+
+extern c fn FuseReplyBuffer(
+    request *void,
+    buffer *const i8,
+    size usize
+) i32 as fuse_reply_buf {
+    // SAFETY: buffer has size live bytes for this call.
+    unsafe {
+        return nativeReplyBuffer(request, buffer, size)
+    }
+}
+
+extern c fn FuseReplyReadLink(
+    request *void,
+    target *const i8
+) i32 as fuse_reply_readlink {
+    // SAFETY: target is NUL-terminated and live for this call.
+    unsafe {
+        return nativeReplyReadLink(request, target)
+    }
+}
+
+extern c fn FuseReplyExtendedAttribute(
+    request *void,
+    count usize
+) i32 as fuse_reply_xattr {
+    // SAFETY: the opaque request remains live until the reply completes.
+    unsafe {
+        return nativeReplyExtendedAttribute(request, count)
+    }
+}
+
+extern c fn FuseReplyWrite(request *void, count usize) i32 as fuse_reply_write {
+    // SAFETY: the opaque request remains live until the reply completes.
+    unsafe {
+        return nativeReplyWrite(request, count)
+    }
+}
+
+extern c fn FuseReplyFileSystem(
+    request *void,
+    value *const void
+) i32 as fuse_reply_statfs {
+    // SAFETY: value is a live statvfs value for this call.
+    unsafe {
+        return nativeReplyFileSystem(request, value)
+    }
+}
+
+extern c fn FuseReplyCreate(
+    request *void,
+    entry *const void,
+    info *const void
+) i32 as fuse_reply_create {
+    // SAFETY: both FUSE2 values are live for this call.
+    unsafe {
+        return nativeReplyCreate(request, entry, info)
+    }
+}
+
+extern c fn FuseReplyLock(
+    request *void,
+    lock *const void
+) i32 as fuse_reply_lock {
+    // SAFETY: lock points to a live flock structure for this synchronous reply.
+    unsafe {
+        return nativeReplyLock(request, lock)
+    }
+}
+
+extern c fn FuseReplyBlockMap(request *void, index u64) i32 as fuse_reply_bmap {
+    // SAFETY: the opaque request remains live until the reply completes.
+    unsafe {
+        return nativeReplyBlockMap(request, index)
+    }
+}
+
+extern c fn FuseAddDirectoryEntry(
+    request *void,
+    buffer *i8,
+    bufferSize usize,
+    name *const i8,
+    status *const void,
+    offset isize
+) usize as fuse_add_direntry {
+    // SAFETY: buffers and status follow the call-scoped FUSE2 contract.
+    unsafe {
+        return nativeAddDirectoryEntry(
+            request,
+            buffer,
+            bufferSize,
+            name,
+            status,
+            offset
+        )
+    }
+}

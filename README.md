@@ -40,17 +40,25 @@ still load `libfuse.so.2`.
 
 Requirements:
 
+- the Foundation Lang compiler
 - a C11 compiler
 - GNU make
 - `libdl` and pthreads
 - FUSE3 installed at runtime
 
-No FUSE2 development package is used or required.
+An ordinary source build does not need FUSE2 development headers. Debian packaging installs them
+only so its test phase can verify the historical header layouts; the installed library does not
+link against FUSE2.
 
 ```bash
 make
 make check
 ```
+
+Set `FOUNDATIONC=/path/to/foundationc` when the compiler is not on `PATH`.
+Foundation owns the exported FUSE2 entry points. The C sources remain the native
+FUSE3 loader and ABI translation adapter linked behind that boundary. Legacy
+callbacks return through Foundation after the adapter converts their arguments.
 
 ## Test without installing
 

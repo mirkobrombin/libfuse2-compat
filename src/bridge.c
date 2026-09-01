@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: LGPL-2.1-or-later */
 #include "fuse2_exports.h"
+#include "bridge_native.h"
 #include "fuse3_loader.h"
 
 #include <errno.h>
@@ -51,6 +52,16 @@ static bool valid_chan(const struct fuse2_chan *chan)
 {
 	return chan != NULL && chan->magic == CHANNEL_MAGIC &&
 	       chan->mountpoint != NULL;
+}
+
+static char *duplicate_string(const char *value)
+{
+	size_t size = strlen(value) + 1U;
+	char *copy = malloc(size);
+
+	if (copy != NULL)
+		memcpy(copy, value, size);
+	return copy;
 }
 
 static struct fuse2_session *session_from_req(fuse3_req_t req)
@@ -146,7 +157,7 @@ static void bridge_init(void *userdata, struct fuse3_conn_info *conn)
 	if (!valid_session(session) || session->ops.init == NULL)
 		return;
 	conn_info_3_to_2(conn, &legacy);
-	session->ops.init(session->userdata, &legacy);
+	fuse2_foundation_bridge_init(session->ops.init, session->userdata, &legacy);
 	conn_info_2_to_3(&legacy, conn);
 }
 
@@ -155,7 +166,8 @@ static void bridge_destroy(void *userdata)
 	struct fuse2_session *session = userdata;
 
 	if (valid_session(session) && session->ops.destroy != NULL)
-		session->ops.destroy(session->userdata);
+		fuse2_foundation_bridge_destroy(session->ops.destroy,
+						session->userdata);
 }
 
 static void bridge_lookup(fuse3_req_t req, fuse3_ino_t parent,
@@ -164,7 +176,9 @@ static void bridge_lookup(fuse3_req_t req, fuse3_ino_t parent,
 	struct fuse2_session *session = session_from_req(req);
 
 	if (session != NULL)
-		session->ops.lookup((fuse2_req_t)req, (fuse2_ino_t)parent, name);
+		fuse2_foundation_bridge_lookup(session->ops.lookup,
+						(fuse2_req_t)req,
+						(fuse2_ino_t)parent, name);
 }
 
 static void bridge_forget(fuse3_req_t req, fuse3_ino_t ino, uint64_t nlookup)
@@ -172,8 +186,10 @@ static void bridge_forget(fuse3_req_t req, fuse3_ino_t ino, uint64_t nlookup)
 	struct fuse2_session *session = session_from_req(req);
 
 	if (session != NULL)
-		session->ops.forget((fuse2_req_t)req, (fuse2_ino_t)ino,
-				    (unsigned long)nlookup);
+		fuse2_foundation_bridge_forget(session->ops.forget,
+						(fuse2_req_t)req,
+						(fuse2_ino_t)ino,
+						(unsigned long)nlookup);
 }
 
 static void bridge_getattr(fuse3_req_t req, fuse3_ino_t ino,
@@ -186,7 +202,8 @@ static void bridge_getattr(fuse3_req_t req, fuse3_ino_t ino,
 	if (session == NULL)
 		return;
 	file_info_3_to_2(fi, &legacy);
-	session->ops.getattr((fuse2_req_t)req, (fuse2_ino_t)ino, legacy_ptr);
+	fuse2_foundation_bridge_getattr(session->ops.getattr, (fuse2_req_t)req,
+					(fuse2_ino_t)ino, legacy_ptr);
 	file_info_2_to_3(legacy_ptr, fi);
 }
 
@@ -201,8 +218,9 @@ static void bridge_setattr(fuse3_req_t req, fuse3_ino_t ino,
 	if (session == NULL)
 		return;
 	file_info_3_to_2(fi, &legacy);
-	session->ops.setattr((fuse2_req_t)req, (fuse2_ino_t)ino, attr, to_set,
-			     legacy_ptr);
+	fuse2_foundation_bridge_setattr(session->ops.setattr, (fuse2_req_t)req,
+					(fuse2_ino_t)ino, attr, to_set,
+					legacy_ptr);
 	file_info_2_to_3(legacy_ptr, fi);
 }
 
@@ -211,7 +229,9 @@ static void bridge_readlink(fuse3_req_t req, fuse3_ino_t ino)
 	struct fuse2_session *session = session_from_req(req);
 
 	if (session != NULL)
-		session->ops.readlink((fuse2_req_t)req, (fuse2_ino_t)ino);
+		fuse2_foundation_bridge_readlink(session->ops.readlink,
+						  (fuse2_req_t)req,
+						  (fuse2_ino_t)ino);
 }
 
 static void bridge_open(fuse3_req_t req, fuse3_ino_t ino,
@@ -223,7 +243,8 @@ static void bridge_open(fuse3_req_t req, fuse3_ino_t ino,
 	if (session == NULL)
 		return;
 	file_info_3_to_2(fi, &legacy);
-	session->ops.open((fuse2_req_t)req, (fuse2_ino_t)ino, &legacy);
+	fuse2_foundation_bridge_open(session->ops.open, (fuse2_req_t)req,
+				     (fuse2_ino_t)ino, &legacy);
 	file_info_2_to_3(&legacy, fi);
 }
 
@@ -236,7 +257,8 @@ static void bridge_read(fuse3_req_t req, fuse3_ino_t ino, size_t size,
 	if (session == NULL)
 		return;
 	file_info_3_to_2(fi, &legacy);
-	session->ops.read((fuse2_req_t)req, (fuse2_ino_t)ino, size, off, &legacy);
+	fuse2_foundation_bridge_read(session->ops.read, (fuse2_req_t)req,
+				     (fuse2_ino_t)ino, size, off, &legacy);
 	file_info_2_to_3(&legacy, fi);
 }
 
@@ -249,8 +271,9 @@ static void bridge_write(fuse3_req_t req, fuse3_ino_t ino, const char *buf,
 	if (session == NULL)
 		return;
 	file_info_3_to_2(fi, &legacy);
-	session->ops.write((fuse2_req_t)req, (fuse2_ino_t)ino, buf, size, off,
-			   &legacy);
+	fuse2_foundation_bridge_write(session->ops.write, (fuse2_req_t)req,
+				      (fuse2_ino_t)ino, buf, size, off,
+				      &legacy);
 	file_info_2_to_3(&legacy, fi);
 }
 
@@ -263,7 +286,8 @@ static void bridge_release(fuse3_req_t req, fuse3_ino_t ino,
 	if (session == NULL)
 		return;
 	file_info_3_to_2(fi, &legacy);
-	session->ops.release((fuse2_req_t)req, (fuse2_ino_t)ino, &legacy);
+	fuse2_foundation_bridge_release(session->ops.release, (fuse2_req_t)req,
+					(fuse2_ino_t)ino, &legacy);
 	file_info_2_to_3(&legacy, fi);
 }
 
@@ -276,7 +300,8 @@ static void bridge_opendir(fuse3_req_t req, fuse3_ino_t ino,
 	if (session == NULL)
 		return;
 	file_info_3_to_2(fi, &legacy);
-	session->ops.opendir((fuse2_req_t)req, (fuse2_ino_t)ino, &legacy);
+	fuse2_foundation_bridge_opendir(session->ops.opendir, (fuse2_req_t)req,
+					(fuse2_ino_t)ino, &legacy);
 	file_info_2_to_3(&legacy, fi);
 }
 
@@ -289,8 +314,9 @@ static void bridge_readdir(fuse3_req_t req, fuse3_ino_t ino, size_t size,
 	if (session == NULL)
 		return;
 	file_info_3_to_2(fi, &legacy);
-	session->ops.readdir((fuse2_req_t)req, (fuse2_ino_t)ino, size, off,
-			     &legacy);
+	fuse2_foundation_bridge_readdir(session->ops.readdir, (fuse2_req_t)req,
+					(fuse2_ino_t)ino, size, off,
+					&legacy);
 	file_info_2_to_3(&legacy, fi);
 }
 
@@ -303,7 +329,9 @@ static void bridge_releasedir(fuse3_req_t req, fuse3_ino_t ino,
 	if (session == NULL)
 		return;
 	file_info_3_to_2(fi, &legacy);
-	session->ops.releasedir((fuse2_req_t)req, (fuse2_ino_t)ino, &legacy);
+	fuse2_foundation_bridge_releasedir(session->ops.releasedir,
+					   (fuse2_req_t)req,
+					   (fuse2_ino_t)ino, &legacy);
 	file_info_2_to_3(&legacy, fi);
 }
 
@@ -312,7 +340,9 @@ static void bridge_statfs(fuse3_req_t req, fuse3_ino_t ino)
 	struct fuse2_session *session = session_from_req(req);
 
 	if (session != NULL)
-		session->ops.statfs((fuse2_req_t)req, (fuse2_ino_t)ino);
+		fuse2_foundation_bridge_statfs(session->ops.statfs,
+						(fuse2_req_t)req,
+						(fuse2_ino_t)ino);
 }
 
 static void bridge_getxattr(fuse3_req_t req, fuse3_ino_t ino,
@@ -321,8 +351,9 @@ static void bridge_getxattr(fuse3_req_t req, fuse3_ino_t ino,
 	struct fuse2_session *session = session_from_req(req);
 
 	if (session != NULL)
-		session->ops.getxattr((fuse2_req_t)req, (fuse2_ino_t)ino, name,
-				      size);
+		fuse2_foundation_bridge_getxattr(session->ops.getxattr,
+						 (fuse2_req_t)req,
+						 (fuse2_ino_t)ino, name, size);
 }
 
 static void bridge_listxattr(fuse3_req_t req, fuse3_ino_t ino, size_t size)
@@ -330,7 +361,9 @@ static void bridge_listxattr(fuse3_req_t req, fuse3_ino_t ino, size_t size)
 	struct fuse2_session *session = session_from_req(req);
 
 	if (session != NULL)
-		session->ops.listxattr((fuse2_req_t)req, (fuse2_ino_t)ino, size);
+		fuse2_foundation_bridge_listxattr(session->ops.listxattr,
+						  (fuse2_req_t)req,
+						  (fuse2_ino_t)ino, size);
 }
 
 static void bridge_create(fuse3_req_t req, fuse3_ino_t parent,
@@ -343,8 +376,9 @@ static void bridge_create(fuse3_req_t req, fuse3_ino_t parent,
 	if (session == NULL)
 		return;
 	file_info_3_to_2(fi, &legacy);
-	session->ops.create((fuse2_req_t)req, (fuse2_ino_t)parent, name, mode,
-			    &legacy);
+	fuse2_foundation_bridge_create(session->ops.create, (fuse2_req_t)req,
+				       (fuse2_ino_t)parent, name, mode,
+				       &legacy);
 	file_info_2_to_3(&legacy, fi);
 }
 
@@ -390,8 +424,8 @@ static void configure_backend_ops(struct fuse2_session *session,
 		ops->create = bridge_create;
 }
 
-int fuse_opt_parse(struct fuse2_args *args, void *data,
-		   const struct fuse2_opt opts[], fuse2_opt_proc_t proc)
+int fuse2_native_opt_parse(struct fuse2_args *args, void *data,
+			   const struct fuse2_opt opts[], fuse2_opt_proc_t proc)
 {
 	const struct fuse3_api *api = require_api();
 
@@ -402,7 +436,7 @@ int fuse_opt_parse(struct fuse2_args *args, void *data,
 			      (fuse3_opt_proc_t)proc);
 }
 
-int fuse_opt_add_arg(struct fuse2_args *args, const char *arg)
+int fuse2_native_opt_add_arg(struct fuse2_args *args, const char *arg)
 {
 	const struct fuse3_api *api = require_api();
 
@@ -410,7 +444,7 @@ int fuse_opt_add_arg(struct fuse2_args *args, const char *arg)
 		api->opt_add_arg((struct fuse3_args *)args, arg) : -1;
 }
 
-void fuse_opt_free_args(struct fuse2_args *args)
+void fuse2_native_opt_free_args(struct fuse2_args *args)
 {
 	const struct fuse3_api *api = require_api();
 
@@ -418,8 +452,8 @@ void fuse_opt_free_args(struct fuse2_args *args)
 		api->opt_free_args((struct fuse3_args *)args);
 }
 
-int fuse_parse_cmdline(struct fuse2_args *args, char **mountpoint,
-		       int *multithreaded, int *foreground)
+int fuse2_native_parse_cmdline(struct fuse2_args *args, char **mountpoint,
+			       int *multithreaded, int *foreground)
 {
 	const struct fuse3_api *api = require_api();
 	struct fuse3_cmdline_opts options;
@@ -442,19 +476,15 @@ int fuse_parse_cmdline(struct fuse2_args *args, char **mountpoint,
 	return 0;
 }
 
-int fuse_daemonize(int foreground)
+int fuse2_native_daemonize(int foreground)
 {
 	const struct fuse3_api *api = require_api();
 
 	return api != NULL ? api->daemonize(foreground) : -1;
 }
 
-int fuse_version(void)
-{
-	return 29;
-}
-
-struct fuse2_chan *fuse_mount(const char *mountpoint, struct fuse2_args *args)
+struct fuse2_chan *fuse2_native_mount(const char *mountpoint,
+				      struct fuse2_args *args)
 {
 	struct fuse2_chan *chan;
 
@@ -468,7 +498,7 @@ struct fuse2_chan *fuse_mount(const char *mountpoint, struct fuse2_args *args)
 	chan = calloc(1, sizeof(*chan));
 	if (chan == NULL)
 		return NULL;
-	chan->mountpoint = strdup(mountpoint);
+	chan->mountpoint = duplicate_string(mountpoint);
 	if (chan->mountpoint == NULL) {
 		free(chan);
 		return NULL;
@@ -478,7 +508,7 @@ struct fuse2_chan *fuse_mount(const char *mountpoint, struct fuse2_args *args)
 	return chan;
 }
 
-struct fuse2_session *fuse_lowlevel_new(
+struct fuse2_session *fuse2_native_lowlevel_new(
 	struct fuse2_args *args, const struct fuse2_lowlevel_ops *ops,
 	size_t op_size, void *userdata)
 {
@@ -511,8 +541,8 @@ struct fuse2_session *fuse_lowlevel_new(
 	return session;
 }
 
-void fuse_session_add_chan(struct fuse2_session *session,
-			   struct fuse2_chan *chan)
+void fuse2_native_session_add_chan(struct fuse2_session *session,
+				   struct fuse2_chan *chan)
 {
 	const struct fuse3_api *api = require_api();
 
@@ -530,7 +560,7 @@ void fuse_session_add_chan(struct fuse2_session *session,
 	fuse2_compat_log("mounted FUSE3 session at %s", chan->mountpoint);
 }
 
-void fuse_session_remove_chan(struct fuse2_chan *chan)
+void fuse2_native_session_remove_chan(struct fuse2_chan *chan)
 {
 	const struct fuse3_api *api = require_api();
 	struct fuse2_session *session;
@@ -548,7 +578,7 @@ void fuse_session_remove_chan(struct fuse2_chan *chan)
 	chan->session = NULL;
 }
 
-int fuse_session_loop(struct fuse2_session *session)
+int fuse2_native_session_loop(struct fuse2_session *session)
 {
 	const struct fuse3_api *api = require_api();
 
@@ -559,7 +589,7 @@ int fuse_session_loop(struct fuse2_session *session)
 	return api->session_loop(session->backend);
 }
 
-void fuse_session_destroy(struct fuse2_session *session)
+void fuse2_native_session_destroy(struct fuse2_session *session)
 {
 	const struct fuse3_api *api = require_api();
 
@@ -577,19 +607,19 @@ void fuse_session_destroy(struct fuse2_session *session)
 	free(session);
 }
 
-void fuse_unmount(const char *mountpoint, struct fuse2_chan *chan)
+void fuse2_native_unmount(const char *mountpoint, struct fuse2_chan *chan)
 {
 	(void)mountpoint;
 	if (!valid_chan(chan))
 		return;
 	if (chan->mounted || chan->session != NULL)
-		fuse_session_remove_chan(chan);
+		fuse2_native_session_remove_chan(chan);
 	chan->magic = 0;
 	free(chan->mountpoint);
 	free(chan);
 }
 
-int fuse_set_signal_handlers(struct fuse2_session *session)
+int fuse2_native_set_signal_handlers(struct fuse2_session *session)
 {
 	const struct fuse3_api *api = require_api();
 
@@ -597,7 +627,7 @@ int fuse_set_signal_handlers(struct fuse2_session *session)
 		api->set_signal_handlers(session->backend) : -1;
 }
 
-void fuse_remove_signal_handlers(struct fuse2_session *session)
+void fuse2_native_remove_signal_handlers(struct fuse2_session *session)
 {
 	const struct fuse3_api *api = require_api();
 
@@ -605,7 +635,7 @@ void fuse_remove_signal_handlers(struct fuse2_session *session)
 		api->remove_signal_handlers(session->backend);
 }
 
-void fuse_session_exit(struct fuse2_session *session)
+void fuse2_native_session_exit(struct fuse2_session *session)
 {
 	const struct fuse3_api *api = require_api();
 
@@ -613,7 +643,7 @@ void fuse_session_exit(struct fuse2_session *session)
 		api->session_exit(session->backend);
 }
 
-int fuse_session_exited(struct fuse2_session *session)
+int fuse2_native_session_exited(struct fuse2_session *session)
 {
 	const struct fuse3_api *api = require_api();
 
@@ -621,7 +651,7 @@ int fuse_session_exited(struct fuse2_session *session)
 		api->session_exited(session->backend) : 0;
 }
 
-void fuse_session_reset(struct fuse2_session *session)
+void fuse2_native_session_reset(struct fuse2_session *session)
 {
 	const struct fuse3_api *api = require_api();
 
@@ -629,21 +659,21 @@ void fuse_session_reset(struct fuse2_session *session)
 		api->session_reset(session->backend);
 }
 
-void *fuse_req_userdata(fuse2_req_t req)
+void *fuse2_native_req_userdata(fuse2_req_t req)
 {
 	struct fuse2_session *session = session_from_req((fuse3_req_t)req);
 
 	return session != NULL ? session->userdata : NULL;
 }
 
-int fuse_reply_err(fuse2_req_t req, int err)
+int fuse2_native_reply_err(fuse2_req_t req, int err)
 {
 	const struct fuse3_api *api = require_api();
 
 	return api != NULL ? api->reply_err((fuse3_req_t)req, err) : -ENOSYS;
 }
 
-void fuse_reply_none(fuse2_req_t req)
+void fuse2_native_reply_none(fuse2_req_t req)
 {
 	const struct fuse3_api *api = require_api();
 
@@ -651,7 +681,8 @@ void fuse_reply_none(fuse2_req_t req)
 		api->reply_none((fuse3_req_t)req);
 }
 
-int fuse_reply_entry(fuse2_req_t req, const struct fuse2_entry_param *entry)
+int fuse2_native_reply_entry(fuse2_req_t req,
+			     const struct fuse2_entry_param *entry)
 {
 	const struct fuse3_api *api = require_api();
 	struct fuse3_entry_param backend_entry;
@@ -662,8 +693,8 @@ int fuse_reply_entry(fuse2_req_t req, const struct fuse2_entry_param *entry)
 	return api->reply_entry((fuse3_req_t)req, &backend_entry);
 }
 
-int fuse_reply_attr(fuse2_req_t req, const struct stat *attr,
-		    double attr_timeout)
+int fuse2_native_reply_attr(fuse2_req_t req, const struct stat *attr,
+			    double attr_timeout)
 {
 	const struct fuse3_api *api = require_api();
 
@@ -671,7 +702,8 @@ int fuse_reply_attr(fuse2_req_t req, const struct stat *attr,
 		api->reply_attr((fuse3_req_t)req, attr, attr_timeout) : -ENOSYS;
 }
 
-int fuse_reply_open(fuse2_req_t req, const struct fuse2_file_info *fi)
+int fuse2_native_reply_open(fuse2_req_t req,
+			    const struct fuse2_file_info *fi)
 {
 	const struct fuse3_api *api = require_api();
 	struct fuse3_file_info backend_fi;
@@ -683,7 +715,7 @@ int fuse_reply_open(fuse2_req_t req, const struct fuse2_file_info *fi)
 	return api->reply_open((fuse3_req_t)req, &backend_fi);
 }
 
-int fuse_reply_buf(fuse2_req_t req, const char *buf, size_t size)
+int fuse2_native_reply_buf(fuse2_req_t req, const char *buf, size_t size)
 {
 	const struct fuse3_api *api = require_api();
 
@@ -691,7 +723,7 @@ int fuse_reply_buf(fuse2_req_t req, const char *buf, size_t size)
 		-ENOSYS;
 }
 
-int fuse_reply_readlink(fuse2_req_t req, const char *link)
+int fuse2_native_reply_readlink(fuse2_req_t req, const char *link)
 {
 	const struct fuse3_api *api = require_api();
 
@@ -699,7 +731,7 @@ int fuse_reply_readlink(fuse2_req_t req, const char *link)
 		-ENOSYS;
 }
 
-int fuse_reply_xattr(fuse2_req_t req, size_t count)
+int fuse2_native_reply_xattr(fuse2_req_t req, size_t count)
 {
 	const struct fuse3_api *api = require_api();
 
@@ -707,7 +739,7 @@ int fuse_reply_xattr(fuse2_req_t req, size_t count)
 		-ENOSYS;
 }
 
-int fuse_reply_write(fuse2_req_t req, size_t count)
+int fuse2_native_reply_write(fuse2_req_t req, size_t count)
 {
 	const struct fuse3_api *api = require_api();
 
@@ -715,7 +747,8 @@ int fuse_reply_write(fuse2_req_t req, size_t count)
 		-ENOSYS;
 }
 
-int fuse_reply_statfs(fuse2_req_t req, const struct statvfs *statfsbuf)
+int fuse2_native_reply_statfs(fuse2_req_t req,
+			      const struct statvfs *statfsbuf)
 {
 	const struct fuse3_api *api = require_api();
 
@@ -723,8 +756,9 @@ int fuse_reply_statfs(fuse2_req_t req, const struct statvfs *statfsbuf)
 		-ENOSYS;
 }
 
-int fuse_reply_create(fuse2_req_t req, const struct fuse2_entry_param *entry,
-		      const struct fuse2_file_info *fi)
+int fuse2_native_reply_create(fuse2_req_t req,
+			      const struct fuse2_entry_param *entry,
+			      const struct fuse2_file_info *fi)
 {
 	const struct fuse3_api *api = require_api();
 	struct fuse3_entry_param backend_entry;
@@ -738,22 +772,23 @@ int fuse_reply_create(fuse2_req_t req, const struct fuse2_entry_param *entry,
 	return api->reply_create((fuse3_req_t)req, &backend_entry, &backend_fi);
 }
 
-int fuse_reply_lock(fuse2_req_t req, const struct flock *lock)
+int fuse2_native_reply_lock(fuse2_req_t req, const struct flock *lock)
 {
 	const struct fuse3_api *api = require_api();
 
 	return api != NULL ? api->reply_lock((fuse3_req_t)req, lock) : -ENOSYS;
 }
 
-int fuse_reply_bmap(fuse2_req_t req, uint64_t idx)
+int fuse2_native_reply_bmap(fuse2_req_t req, uint64_t idx)
 {
 	const struct fuse3_api *api = require_api();
 
 	return api != NULL ? api->reply_bmap((fuse3_req_t)req, idx) : -ENOSYS;
 }
 
-size_t fuse_add_direntry(fuse2_req_t req, char *buf, size_t bufsize,
-			 const char *name, const struct stat *statbuf, off_t off)
+size_t fuse2_native_add_direntry(fuse2_req_t req, char *buf, size_t bufsize,
+				 const char *name,
+				 const struct stat *statbuf, off_t off)
 {
 	const struct fuse3_api *api = require_api();
 
