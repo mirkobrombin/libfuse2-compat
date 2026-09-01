@@ -1,0 +1,217 @@
+// SPDX-License-Identifier: LGPL-2.1-or-later
+package libfuse2.compat
+
+struct Api {
+    Handle *void
+    OptParse *void
+    OptAddArg *void
+    OptFreeArgs *void
+    ParseCommandLine *void
+    SessionNew *void
+    SessionMount *void
+    SessionUnmount *void
+    SessionLoop *void
+    SessionDestroy *void
+    SessionExit *void
+    SessionExited *void
+    SessionReset *void
+    SetSignalHandlers *void
+    RemoveSignalHandlers *void
+    Daemonize *void
+    RequestUserData *void
+    ReplyError *void
+    ReplyNone *void
+    ReplyEntry *void
+    ReplyAttribute *void
+    ReplyOpen *void
+    ReplyBuffer *void
+    ReplyReadLink *void
+    ReplyExtendedAttribute *void
+    ReplyWrite *void
+    ReplyFileSystem *void
+    ReplyCreate *void
+    ReplyLock *void
+    ReplyBlockMap *void
+    AddDirectoryEntry *void
+}
+
+struct LegacyFileInfo {
+    Flags i32
+    Padding u32
+    OldHandle usize
+    WritePage i32
+    Bits u32
+    Handle u64
+    LockOwner u64
+}
+
+struct BackendFileInfo {
+    Flags i32
+    Bits u32
+    Padding2 u32
+    Padding3 u32
+    Handle u64
+    LockOwner u64
+    PollEvents u32
+    Padding4 u32
+}
+
+struct LegacyConnectionPrefix {
+    ProtocolMajor u32
+    ProtocolMinor u32
+    AsyncRead u32
+    MaxWrite u32
+    MaxReadAhead u32
+    Capable u32
+    Want u32
+    MaxBackground u32
+    CongestionThreshold u32
+}
+
+struct BackendConnectionPrefix {
+    ProtocolMajor u32
+    ProtocolMinor u32
+    MaxWrite u32
+    MaxRead u32
+    MaxReadAhead u32
+    Capable u32
+    Want u32
+    MaxBackground u32
+    CongestionThreshold u32
+    TimeGranularity u32
+}
+
+struct BackendCommandLine {
+    SingleThread i32
+    Foreground i32
+    Debug i32
+    NoDefaultSubtype i32
+    Mountpoint *i8
+    ShowVersion i32
+    ShowHelp i32
+    CloneFileDescriptor i32
+    MaxIdleThreads u32
+    MaxThreads u32
+}
+
+struct Request {
+    Magic u64
+    Backend *void
+    SessionValue *void
+}
+
+struct LegacyOps {
+    Init extern c fn(*void, *void) void
+    Destroy extern c fn(*void) void
+    Lookup extern c fn(&Request, u64, *const i8) void
+    Forget extern c fn(&Request, u64, u64) void
+    GetAttribute extern c fn(&Request, u64, *LegacyFileInfo) void
+    SetAttribute extern c fn(&Request, u64, *void, i32, *LegacyFileInfo) void
+    ReadLink extern c fn(&Request, u64) void
+    MakeNode *void
+    MakeDirectory *void
+    Unlink *void
+    RemoveDirectory *void
+    SymbolicLink *void
+    Rename *void
+    Link *void
+    Open extern c fn(&Request, u64, *LegacyFileInfo) void
+    Read extern c fn(&Request, u64, usize, isize, *LegacyFileInfo) void
+    Write extern c fn(&Request, u64, *const i8, usize, isize, *LegacyFileInfo) void
+    Flush *void
+    Release extern c fn(&Request, u64, *LegacyFileInfo) void
+    Sync *void
+    OpenDirectory extern c fn(&Request, u64, *LegacyFileInfo) void
+    ReadDirectory extern c fn(&Request, u64, usize, isize, *LegacyFileInfo) void
+    ReleaseDirectory extern c fn(&Request, u64, *LegacyFileInfo) void
+    SyncDirectory *void
+    FileSystemStatus extern c fn(&Request, u64) void
+    SetExtendedAttribute *void
+    GetExtendedAttribute extern c fn(&Request, u64, *const i8, usize) void
+    ListExtendedAttributes extern c fn(&Request, u64, usize) void
+    RemoveExtendedAttribute *void
+    Access *void
+    Create extern c fn(&Request, u64, *const i8, u32, *LegacyFileInfo) void
+    GetLock *void
+    SetLock *void
+    BlockMap *void
+    IoControl *void
+    Poll *void
+    WriteBuffer *void
+    RetrieveReply *void
+    ForgetMany *void
+    FileLock *void
+    Allocate *void
+}
+
+struct BackendOps {
+    Init extern c fn(*void, *void) void
+    Destroy extern c fn(*void) void
+    Lookup extern c fn(*void, u64, *const i8) void
+    Forget extern c fn(*void, u64, u64) void
+    GetAttribute extern c fn(*void, u64, *void) void
+    SetAttribute extern c fn(*void, u64, *void, i32, *void) void
+    ReadLink extern c fn(*void, u64) void
+    MakeNode *void
+    MakeDirectory *void
+    Unlink *void
+    RemoveDirectory *void
+    SymbolicLink *void
+    Rename *void
+    Link *void
+    Open extern c fn(*void, u64, *void) void
+    Read extern c fn(*void, u64, usize, isize, *void) void
+    Write extern c fn(*void, u64, *const i8, usize, isize, *void) void
+    Flush *void
+    Release extern c fn(*void, u64, *void) void
+    Sync *void
+    OpenDirectory extern c fn(*void, u64, *void) void
+    ReadDirectory extern c fn(*void, u64, usize, isize, *void) void
+    ReleaseDirectory extern c fn(*void, u64, *void) void
+    SyncDirectory *void
+    FileSystemStatus extern c fn(*void, u64) void
+    SetExtendedAttribute *void
+    GetExtendedAttribute extern c fn(*void, u64, *const i8, usize) void
+    ListExtendedAttributes extern c fn(*void, u64, usize) void
+    RemoveExtendedAttribute *void
+    Access *void
+    Create extern c fn(*void, u64, *const i8, u32, *void) void
+    GetLock *void
+    SetLock *void
+    BlockMap *void
+    IoControl *void
+    Poll *void
+    WriteBuffer *void
+    RetrieveReply *void
+    ForgetMany *void
+    FileLock *void
+    Allocate *void
+}
+
+struct Session {
+    Magic u64
+    Backend *void
+    ApiTable *Api
+    Operations *LegacyOps
+    UserData *void
+    ChannelValue *void
+    MountError i32
+}
+
+struct CompatChannel {
+    Magic u64
+    Mountpoint *i8
+    SessionValue *void
+    Mounted bool
+}
+
+extern c fn allocateZeroed(count usize, size usize) *void as calloc
+extern c fn releaseMemory(value *void) void as free
+extern c fn copyMemory(destination *void, source *const void, size usize) *void as memcpy
+extern c fn duplicateString(value *const i8) *i8 as strdup
+extern c fn environmentValue(name *const u8) *u8 as getenv
+extern c fn writeDescriptor(descriptor i32, value *const u8, size usize) isize as write
+extern c fn openDynamicLibrary(name *const u8, flags i32) *void as dlopen
+extern c fn closeDynamicLibrary(handle *void) i32 as dlclose
+extern c fn dynamicSymbol(handle *void, name *const u8) *void as dlsym
+extern c fn dynamicError() *u8 as dlerror

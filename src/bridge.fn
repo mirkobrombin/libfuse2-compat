@@ -1,357 +1,25 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 package libfuse2.compat
 
-extern c fn nativeOptParse(
-    args *void,
-    data *void,
-    options *const void,
-    process extern c fn(*void, *const i8, i32, *void) i32
-) i32 as fuse2_native_opt_parse
-
-extern c fn nativeOptAddArg(
-    args *void,
-    argument *const i8
-) i32 as fuse2_native_opt_add_arg
-extern c fn nativeOptFreeArgs(args *void) void as fuse2_native_opt_free_args
-extern c fn nativeParseCommandLine(
-    args *void,
-    mountpoint **i8,
-    multithreaded *i32,
-    foreground *i32
-) i32 as fuse2_native_parse_cmdline
-extern c fn nativeDaemonize(foreground i32) i32 as fuse2_native_daemonize
-extern c fn nativeMount(
-    mountpoint *const i8,
-    args *void
-) *void as fuse2_native_mount
-extern c fn nativeLowLevelNew(
-    args *void,
-    operations *const void,
-    operationSize usize,
-    userData *void
-) *void as fuse2_native_lowlevel_new
-extern c fn nativeSessionAddChannel(
-    session *void,
-    channel *void
-) void as fuse2_native_session_add_chan
-extern c fn nativeSessionRemoveChannel(
-    channel *void
-) void as fuse2_native_session_remove_chan
-extern c fn nativeSessionLoop(session *void) i32 as fuse2_native_session_loop
-extern c fn nativeSessionDestroy(
-    session *void
-) void as fuse2_native_session_destroy
-extern c fn nativeUnmount(
-    mountpoint *const i8,
-    channel *void
-) void as fuse2_native_unmount
-extern c fn nativeSetSignalHandlers(
-    session *void
-) i32 as fuse2_native_set_signal_handlers
-extern c fn nativeRemoveSignalHandlers(
-    session *void
-) void as fuse2_native_remove_signal_handlers
-extern c fn nativeSessionExit(session *void) void as fuse2_native_session_exit
-extern c fn nativeSessionExited(
-    session *void
-) i32 as fuse2_native_session_exited
-extern c fn nativeSessionReset(session *void) void as fuse2_native_session_reset
-extern c fn nativeRequestUserData(
-    request *void
-) *void as fuse2_native_req_userdata
-extern c fn nativeReplyError(
-    request *void,
-    errorCode i32
-) i32 as fuse2_native_reply_err
-extern c fn nativeReplyNone(request *void) void as fuse2_native_reply_none
-extern c fn nativeReplyEntry(
-    request *void,
-    entry *const void
-) i32 as fuse2_native_reply_entry
-extern c fn nativeReplyAttribute(
-    request *void,
-    statValue *const void,
-    expiration f64
-) i32 as fuse2_native_reply_attr
-extern c fn nativeReplyOpen(
-    request *void,
-    info *const void
-) i32 as fuse2_native_reply_open
-extern c fn nativeReplyBuffer(
-    request *void,
-    buffer *const i8,
-    size usize
-) i32 as fuse2_native_reply_buf
-extern c fn nativeReplyReadLink(
-    request *void,
-    target *const i8
-) i32 as fuse2_native_reply_readlink
-extern c fn nativeReplyExtendedAttribute(
-    request *void,
-    count usize
-) i32 as fuse2_native_reply_xattr
-extern c fn nativeReplyWrite(
-    request *void,
-    count usize
-) i32 as fuse2_native_reply_write
-extern c fn nativeReplyFileSystem(
-    request *void,
-    value *const void
-) i32 as fuse2_native_reply_statfs
-extern c fn nativeReplyCreate(
-    request *void,
-    entry *const void,
-    info *const void
-) i32 as fuse2_native_reply_create
-extern c fn nativeReplyLock(
-    request *void,
-    lock *const void
-) i32 as fuse2_native_reply_lock
-extern c fn nativeReplyBlockMap(
-    request *void,
-    index u64
-) i32 as fuse2_native_reply_bmap
-extern c fn nativeAddDirectoryEntry(
-    request *void,
-    buffer *i8,
-    bufferSize usize,
-    name *const i8,
-    status *const void,
-    offset isize
-) usize as fuse2_native_add_direntry
-
-extern c fn foundationBridgeInit(
-    callback extern c fn(*void, *void) void,
-    userData *void,
-    connection *void
-) void as fuse2_foundation_bridge_init {
-    // SAFETY: callback and FUSE2 values are live for this call.
-    unsafe {
-        callback(userData, connection)
-    }
-}
-
-extern c fn foundationBridgeDestroy(
-    callback extern c fn(*void) void,
-    userData *void
-) void as fuse2_foundation_bridge_destroy {
-    // SAFETY: callback and userdata are live for this call.
-    unsafe {
-        callback(userData)
-    }
-}
-
-extern c fn foundationBridgeLookup(
-    callback extern c fn(*void, u64, *const i8) void,
-    request *void,
-    parent u64,
-    name *const i8
-) void as fuse2_foundation_bridge_lookup {
-    // SAFETY: callback and request values are live for this call.
-    unsafe {
-        callback(request, parent, name)
-    }
-}
-
-extern c fn foundationBridgeForget(
-    callback extern c fn(*void, u64, usize) void,
-    request *void,
-    inode u64,
-    lookupCount usize
-) void as fuse2_foundation_bridge_forget {
-    // SAFETY: callback and request values are live for this call.
-    unsafe {
-        callback(request, inode, lookupCount)
-    }
-}
-
-extern c fn foundationBridgeGetAttribute(
-    callback extern c fn(*void, u64, *void) void,
-    request *void,
-    inode u64,
-    info *void
-) void as fuse2_foundation_bridge_getattr {
-    // SAFETY: callback and converted info are live for this call.
-    unsafe {
-        callback(request, inode, info)
-    }
-}
-
-extern c fn foundationBridgeSetAttribute(
-    callback extern c fn(*void, u64, *void, i32, *void) void,
-    request *void,
-    inode u64,
-    status *void,
-    fields i32,
-    info *void
-) void as fuse2_foundation_bridge_setattr {
-    // SAFETY: callback, status, and info are live for this call.
-    unsafe {
-        callback(request, inode, status, fields, info)
-    }
-}
-
-extern c fn foundationBridgeReadLink(
-    callback extern c fn(*void, u64) void,
-    request *void,
-    inode u64
-) void as fuse2_foundation_bridge_readlink {
-    // SAFETY: callback and request are live for this call.
-    unsafe {
-        callback(request, inode)
-    }
-}
-
-extern c fn foundationBridgeOpen(
-    callback extern c fn(*void, u64, *void) void,
-    request *void,
-    inode u64,
-    info *void
-) void as fuse2_foundation_bridge_open {
-    // SAFETY: callback and converted info are live for this call.
-    unsafe {
-        callback(request, inode, info)
-    }
-}
-
-extern c fn foundationBridgeRead(
-    callback extern c fn(*void, u64, usize, isize, *void) void,
-    request *void,
-    inode u64,
-    size usize,
-    offset isize,
-    info *void
-) void as fuse2_foundation_bridge_read {
-    // SAFETY: callback, request, and info are live for this call.
-    unsafe {
-        callback(request, inode, size, offset, info)
-    }
-}
-
-extern c fn foundationBridgeWrite(
-    callback extern c fn(*void, u64, *const i8, usize, isize, *void) void,
-    request *void,
-    inode u64,
-    buffer *const i8,
-    size usize,
-    offset isize,
-    info *void
-) void as fuse2_foundation_bridge_write {
-    // SAFETY: callback, buffer, and info are live for this call.
-    unsafe {
-        callback(request, inode, buffer, size, offset, info)
-    }
-}
-
-extern c fn foundationBridgeRelease(
-    callback extern c fn(*void, u64, *void) void,
-    request *void,
-    inode u64,
-    info *void
-) void as fuse2_foundation_bridge_release {
-    // SAFETY: callback and converted info are live for this call.
-    unsafe {
-        callback(request, inode, info)
-    }
-}
-
-extern c fn foundationBridgeOpenDirectory(
-    callback extern c fn(*void, u64, *void) void,
-    request *void,
-    inode u64,
-    info *void
-) void as fuse2_foundation_bridge_opendir {
-    // SAFETY: callback and converted info are live for this call.
-    unsafe {
-        callback(request, inode, info)
-    }
-}
-
-extern c fn foundationBridgeReadDirectory(
-    callback extern c fn(*void, u64, usize, isize, *void) void,
-    request *void,
-    inode u64,
-    size usize,
-    offset isize,
-    info *void
-) void as fuse2_foundation_bridge_readdir {
-    // SAFETY: callback, request, and info are live for this call.
-    unsafe {
-        callback(request, inode, size, offset, info)
-    }
-}
-
-extern c fn foundationBridgeReleaseDirectory(
-    callback extern c fn(*void, u64, *void) void,
-    request *void,
-    inode u64,
-    info *void
-) void as fuse2_foundation_bridge_releasedir {
-    // SAFETY: callback and converted info are live for this call.
-    unsafe {
-        callback(request, inode, info)
-    }
-}
-
-extern c fn foundationBridgeFileSystemStatus(
-    callback extern c fn(*void, u64) void,
-    request *void,
-    inode u64
-) void as fuse2_foundation_bridge_statfs {
-    // SAFETY: callback and request are live for this call.
-    unsafe {
-        callback(request, inode)
-    }
-}
-
-extern c fn foundationBridgeGetExtendedAttribute(
-    callback extern c fn(*void, u64, *const i8, usize) void,
-    request *void,
-    inode u64,
-    name *const i8,
-    size usize
-) void as fuse2_foundation_bridge_getxattr {
-    // SAFETY: callback and NUL-terminated name are live for this call.
-    unsafe {
-        callback(request, inode, name, size)
-    }
-}
-
-extern c fn foundationBridgeListExtendedAttributes(
-    callback extern c fn(*void, u64, usize) void,
-    request *void,
-    inode u64,
-    size usize
-) void as fuse2_foundation_bridge_listxattr {
-    // SAFETY: callback and request are live for this call.
-    unsafe {
-        callback(request, inode, size)
-    }
-}
-
-extern c fn foundationBridgeCreate(
-    callback extern c fn(*void, u64, *const i8, u32, *void) void,
-    request *void,
-    parent u64,
-    name *const i8,
-    mode u32,
-    info *void
-) void as fuse2_foundation_bridge_create {
-    // SAFETY: callback, name, and info are live for this call.
-    unsafe {
-        callback(request, parent, name, mode, info)
-    }
-}
-
 extern c fn FuseOptParse(
     args *void,
     data *void,
     options *const void,
     process extern c fn(*void, *const i8, i32, *void) i32
 ) i32 as fuse_opt_parse {
-    // SAFETY: libfuse2 owns each pointer for this call.
+    const api = openApi()
+    if isNull(api) return -1
+    // SAFETY: the loaded symbol and legacy arguments share the FUSE option ABI.
     unsafe {
-        return nativeOptParse(args, data, options, process)
+        const call = pointerCast<extern c fn(
+            *void,
+            *void,
+            *const void,
+            extern c fn(*void, *const i8, i32, *void) i32
+        ) i32>((*api).OptParse)
+        const result = call(args, data, options, process)
+        closeApi(api)
+        return result
     }
 }
 
@@ -359,16 +27,25 @@ extern c fn FuseOptAddArg(
     args *void,
     argument *const i8
 ) i32 as fuse_opt_add_arg {
-    // SAFETY: the argument vector and string are live for this call.
+    const api = openApi()
+    if isNull(api) return -1
+    // SAFETY: the loaded symbol has the FUSE3 option-add signature.
     unsafe {
-        return nativeOptAddArg(args, argument)
+        const call = pointerCast<extern c fn(*void, *const i8) i32>((*api).OptAddArg)
+        const result = call(args, argument)
+        closeApi(api)
+        return result
     }
 }
 
 extern c fn FuseOptFreeArgs(args *void) void as fuse_opt_free_args {
-    // SAFETY: libfuse2 owns the argument vector released here.
+    const api = openApi()
+    if isNull(api) return
+    // SAFETY: the loaded symbol has the FUSE3 option-free signature.
     unsafe {
-        nativeOptFreeArgs(args)
+        const call = pointerCast<extern c fn(*void) void>((*api).OptFreeArgs)
+        call(args)
+        closeApi(api)
     }
 }
 
@@ -378,19 +55,54 @@ extern c fn FuseParseCommandLine(
     multithreaded *i32,
     foreground *i32
 ) i32 as fuse_parse_cmdline {
-    // SAFETY: outputs follow the call-scoped FUSE2 contract.
+    const api = openApi()
+    if isNull(api) return -1
+    // SAFETY: outputs and the allocated FUSE3 option record are live for this call.
     unsafe {
-        return nativeParseCommandLine(
-            args,
-            mountpoint,
-            multithreaded,
-            foreground
+        const raw = allocateZeroed(1, sizeOf<BackendCommandLine>())
+        if isNull(raw) {
+            closeApi(api)
+            return -1
+        }
+        const options = pointerCast<*BackendCommandLine>(raw)
+        const call = pointerCast<extern c fn(*void, *BackendCommandLine) i32>(
+            (*api).ParseCommandLine
         )
+        const result = call(args, options)
+        if result != 0 {
+            releaseMemory(options)
+            closeApi(api)
+            return -1
+        }
+        if !isNull(multithreaded) {
+            *multithreaded = 1 if (*options).SingleThread == 0 else 0
+        }
+        if !isNull(foreground) {
+            *foreground = (*options).Foreground
+        }
+        if !isNull(mountpoint) {
+            *mountpoint = (*options).Mountpoint
+        } else {
+            if !isNull((*options).Mountpoint) {
+                releaseMemory((*options).Mountpoint)
+            }
+        }
+        releaseMemory(options)
+        closeApi(api)
+        return 0
     }
 }
 
 extern c fn FuseDaemonize(foreground i32) i32 as fuse_daemonize {
-    nativeDaemonize(foreground)
+    const api = openApi()
+    if isNull(api) return -1
+    // SAFETY: the loaded symbol has the FUSE3 daemonize signature.
+    unsafe {
+        const call = pointerCast<extern c fn(i32) i32>((*api).Daemonize)
+        const result = call(foreground)
+        closeApi(api)
+        return result
+    }
 }
 
 extern c fn FuseVersion() i32 as fuse_version {
@@ -398,9 +110,30 @@ extern c fn FuseVersion() i32 as fuse_version {
 }
 
 extern c fn FuseMount(mountpoint *const i8, args *void) *void as fuse_mount {
-    // SAFETY: the mountpoint is NUL-terminated and args follows the FUSE2 ABI.
+    discard args
+    if isNull(mountpoint) {
+        setErrno(22)
+        return emptyPointer()
+    }
+    const api = openApi()
+    if isNull(api) {
+        setErrno(38)
+        return emptyPointer()
+    }
+    closeApi(api)
+    // SAFETY: mountpoint is NUL-terminated and channel storage is calloc-owned.
     unsafe {
-        return nativeMount(mountpoint, args)
+        const raw = allocateZeroed(1, sizeOf<CompatChannel>())
+        if isNull(raw) return null<*void>()
+        const channel = pointerCast<*CompatChannel>(raw)
+        const copy = duplicateString(mountpoint)
+        if isNull(copy) {
+            releaseMemory(channel)
+            return null<*void>()
+        }
+        discard replace (*channel).Magic with 5058179287744597580
+        discard replace (*channel).Mountpoint with copy
+        return channel
     }
 }
 
@@ -410,112 +143,266 @@ extern c fn FuseLowLevelNew(
     operationSize usize,
     userData *void
 ) *void as fuse_lowlevel_new {
-    // SAFETY: operations has operationSize readable bytes.
+    if isNull(args) || isNull(operations) {
+        setErrno(22)
+        return emptyPointer()
+    }
+    const api = openApi()
+    if isNull(api) {
+        setErrno(38)
+        return emptyPointer()
+    }
+    const legacy = copyLegacyOperations(operations, operationSize)
+    if isNull(legacy) {
+        closeApi(api)
+        return emptyPointer()
+    }
+    const backendOperations = configureBackendOperations(legacy)
+    if isNull(backendOperations) {
+        // SAFETY: legacy was allocated by copyLegacyOperations.
+        unsafe {
+            releaseMemory(legacy)
+        }
+        closeApi(api)
+        return emptyPointer()
+    }
+    // SAFETY: all allocated records use their checked C layouts.
     unsafe {
-        return nativeLowLevelNew(args, operations, operationSize, userData)
+        const raw = allocateZeroed(1, sizeOf<Session>())
+        if isNull(raw) {
+            releaseMemory(backendOperations)
+            releaseMemory(legacy)
+            closeApi(api)
+            return null<*void>()
+        }
+        const session = pointerCast<*Session>(raw)
+        discard replace (*session).Magic with 5058179356414923598
+        discard replace (*session).ApiTable with api
+        discard replace (*session).Operations with legacy
+        discard replace (*session).UserData with userData
+        const create = pointerCast<extern c fn(
+            *void,
+            *const void,
+            usize,
+            *void
+        ) *void>((*api).SessionNew)
+        const backend = create(args, backendOperations, sizeOf<BackendOps>(), session)
+        releaseMemory(backendOperations)
+        if isNull(backend) {
+            discard replace (*session).Magic with 0
+            releaseMemory(legacy)
+            releaseMemory(session)
+            closeApi(api)
+            return null<*void>()
+        }
+        discard replace (*session).Backend with backend
+        return session
+    }
+}
+
+fn removeChannel(channel *CompatChannel) void {
+    if !validChannel(channel) return
+    // SAFETY: a mounted channel holds a live session and API table.
+    unsafe {
+        const session = pointerCast<*Session>((*channel).SessionValue)
+        if (*channel).Mounted && validSession(session) {
+            const api = (*session).ApiTable
+            const unmount = pointerCast<extern c fn(*void) void>((*api).SessionUnmount)
+            unmount((*session).Backend)
+            discard replace (*channel).Mounted with false
+        }
+        if validSession(session) && (*session).ChannelValue == channel {
+            discard replace (*session).ChannelValue with null<*void>()
+        }
+        discard replace (*channel).SessionValue with null<*void>()
     }
 }
 
 extern c fn FuseSessionAddChannel(
-    session *void,
-    channel *void
+    sessionValue *void,
+    channelValue *void
 ) void as fuse_session_add_chan {
+    if isNull(sessionValue) || isNull(channelValue) return
     // SAFETY: both opaque handles originate from this compatibility library.
     unsafe {
-        nativeSessionAddChannel(session, channel)
+        const session = pointerCast<*Session>(sessionValue)
+        const channel = pointerCast<*CompatChannel>(channelValue)
+        if !validSession(session) || !validChannel(channel) return
+        const api = (*session).ApiTable
+        const mount = pointerCast<extern c fn(*void, *const i8) i32>(
+            (*api).SessionMount
+        )
+        if mount((*session).Backend, (*channel).Mountpoint) != 0 {
+            const current = readErrno()
+            discard replace (*session).MountError with current if current != 0 else 5
+            return
+        }
+        discard replace (*channel).Mounted with true
+        discard replace (*channel).SessionValue with session
+        discard replace (*session).ChannelValue with channel
     }
 }
 
-extern c fn FuseSessionRemoveChannel(
-    channel *void
-) void as fuse_session_remove_chan {
+extern c fn FuseSessionRemoveChannel(channelValue *void) void as fuse_session_remove_chan {
+    if isNull(channelValue) return
     // SAFETY: the opaque channel originates from this compatibility library.
     unsafe {
-        nativeSessionRemoveChannel(channel)
+        removeChannel(pointerCast<*CompatChannel>(channelValue))
     }
 }
 
-extern c fn FuseSessionLoop(session *void) i32 as fuse_session_loop {
+extern c fn FuseSessionLoop(sessionValue *void) i32 as fuse_session_loop {
+    if isNull(sessionValue) return -1
     // SAFETY: the opaque session originates from this compatibility library.
     unsafe {
-        return nativeSessionLoop(session)
+        const session = pointerCast<*Session>(sessionValue)
+        if !validSession(session) return -1
+        if (*session).MountError != 0 return -(*session).MountError
+        const api = (*session).ApiTable
+        const loop = pointerCast<extern c fn(*void) i32>((*api).SessionLoop)
+        return loop((*session).Backend)
     }
 }
 
-extern c fn FuseSessionDestroy(session *void) void as fuse_session_destroy {
-    // SAFETY: the opaque session is consumed by the historical destroy call.
+extern c fn FuseSessionDestroy(sessionValue *void) void as fuse_session_destroy {
+    if isNull(sessionValue) return
+    // SAFETY: the opaque session is consumed exactly once by this call.
     unsafe {
-        nativeSessionDestroy(session)
+        const session = pointerCast<*Session>(sessionValue)
+        if !validSession(session) return
+        const channelValue = (*session).ChannelValue
+        const channel = pointerCast<*CompatChannel>(channelValue)
+        if !isNull(channelValue) && (*channel).Mounted {
+            removeChannel(channel)
+        }
+        if !isNull(channelValue) {
+            discard replace (*channel).SessionValue with null<*void>()
+        }
+        const api = (*session).ApiTable
+        const destroy = pointerCast<extern c fn(*void) void>((*api).SessionDestroy)
+        destroy((*session).Backend)
+        discard replace (*session).Backend with null<*void>()
+        discard replace (*session).Magic with 0
+        releaseMemory((*session).Operations)
+        closeApi(api)
+        releaseMemory(session)
     }
 }
 
 extern c fn FuseUnmount(
     mountpoint *const i8,
-    channel *void
+    channelValue *void
 ) void as fuse_unmount {
-    // SAFETY: channel and mountpoint are live for this call.
+    discard mountpoint
+    if isNull(channelValue) return
+    // SAFETY: the opaque channel is consumed exactly once by this call.
     unsafe {
-        nativeUnmount(mountpoint, channel)
+        const channel = pointerCast<*CompatChannel>(channelValue)
+        if !validChannel(channel) return
+        if (*channel).Mounted || !isNull((*channel).SessionValue) {
+            removeChannel(channel)
+        }
+        discard replace (*channel).Magic with 0
+        releaseMemory((*channel).Mountpoint)
+        releaseMemory(channel)
     }
 }
 
-extern c fn FuseSetSignalHandlers(
-    session *void
-) i32 as fuse_set_signal_handlers {
+extern c fn FuseSetSignalHandlers(sessionValue *void) i32 as fuse_set_signal_handlers {
+    if isNull(sessionValue) return -1
     // SAFETY: the opaque session originates from this compatibility library.
     unsafe {
-        return nativeSetSignalHandlers(session)
+        const session = pointerCast<*Session>(sessionValue)
+        if !validSession(session) return -1
+        const api = (*session).ApiTable
+        const call = pointerCast<extern c fn(*void) i32>((*api).SetSignalHandlers)
+        return call((*session).Backend)
     }
 }
 
 extern c fn FuseRemoveSignalHandlers(
-    session *void
+    sessionValue *void
 ) void as fuse_remove_signal_handlers {
+    if isNull(sessionValue) return
     // SAFETY: the opaque session originates from this compatibility library.
     unsafe {
-        nativeRemoveSignalHandlers(session)
+        const session = pointerCast<*Session>(sessionValue)
+        if !validSession(session) return
+        const api = (*session).ApiTable
+        const call = pointerCast<extern c fn(*void) void>((*api).RemoveSignalHandlers)
+        call((*session).Backend)
     }
 }
 
-extern c fn FuseSessionExit(session *void) void as fuse_session_exit {
-    // SAFETY: the opaque session remains live during the exit request.
+extern c fn FuseSessionExit(sessionValue *void) void as fuse_session_exit {
+    if isNull(sessionValue) return
+    // SAFETY: the optional symbol is called only when present.
     unsafe {
-        nativeSessionExit(session)
+        const session = pointerCast<*Session>(sessionValue)
+        if !validSession(session) return
+        const api = (*session).ApiTable
+        if isNull((*api).SessionExit) return
+        const call = pointerCast<extern c fn(*void) void>((*api).SessionExit)
+        call((*session).Backend)
     }
 }
 
-extern c fn FuseSessionExited(session *void) i32 as fuse_session_exited {
-    // SAFETY: the opaque session remains live during this state query.
+extern c fn FuseSessionExited(sessionValue *void) i32 as fuse_session_exited {
+    if isNull(sessionValue) return 0
+    // SAFETY: the optional symbol is called only when present.
     unsafe {
-        return nativeSessionExited(session)
+        const session = pointerCast<*Session>(sessionValue)
+        if !validSession(session) return 0
+        const api = (*session).ApiTable
+        if isNull((*api).SessionExited) return 0
+        const call = pointerCast<extern c fn(*void) i32>((*api).SessionExited)
+        return call((*session).Backend)
     }
 }
 
-extern c fn FuseSessionReset(session *void) void as fuse_session_reset {
-    // SAFETY: the opaque session remains live during the reset request.
+extern c fn FuseSessionReset(sessionValue *void) void as fuse_session_reset {
+    if isNull(sessionValue) return
+    // SAFETY: the optional symbol is called only when present.
     unsafe {
-        nativeSessionReset(session)
+        const session = pointerCast<*Session>(sessionValue)
+        if !validSession(session) return
+        const api = (*session).ApiTable
+        if isNull((*api).SessionReset) return
+        const call = pointerCast<extern c fn(*void) void>((*api).SessionReset)
+        call((*session).Backend)
     }
 }
 
 extern c fn FuseRequestUserData(request *void) *void as fuse_req_userdata {
-    // SAFETY: the opaque request remains live for the duration of its callback.
+    const session = requestSession(request)
+    if isNull(session) return emptyPointer()
+    // SAFETY: requestSession validated the live session.
     unsafe {
-        return nativeRequestUserData(request)
+        return (*session).UserData
     }
 }
 
 extern c fn FuseReplyError(request *void, errorCode i32) i32 as fuse_reply_err {
-    // SAFETY: the opaque request remains live until the reply completes.
+    const session = requestSession(request)
+    const backend = backendRequest(request)
+    if isNull(session) || isNull(backend) return -38
+    // SAFETY: the request wrapper owns a live backend request and API table.
     unsafe {
-        return nativeReplyError(request, errorCode)
+        const api = (*session).ApiTable
+        const call = pointerCast<extern c fn(*void, i32) i32>((*api).ReplyError)
+        return call(backend, errorCode)
     }
 }
 
 extern c fn FuseReplyNone(request *void) void as fuse_reply_none {
-    // SAFETY: the opaque request remains live until the reply completes.
+    const session = requestSession(request)
+    const backend = backendRequest(request)
+    if isNull(session) || isNull(backend) return
+    // SAFETY: the request wrapper owns a live backend request and API table.
     unsafe {
-        nativeReplyNone(request)
+        const api = (*session).ApiTable
+        const call = pointerCast<extern c fn(*void) void>((*api).ReplyNone)
+        call(backend)
     }
 }
 
@@ -523,20 +410,32 @@ extern c fn FuseReplyEntry(
     request *void,
     entry *const void
 ) i32 as fuse_reply_entry {
-    // SAFETY: entry is a live FUSE2 entry for this call.
+    const session = requestSession(request)
+    const backend = backendRequest(request)
+    if isNull(session) || isNull(backend) || isNull(entry) return -38
+    // SAFETY: FUSE2 and FUSE3 entry records share the Linux LP64 layout.
     unsafe {
-        return nativeReplyEntry(request, entry)
+        const api = (*session).ApiTable
+        const call = pointerCast<extern c fn(*void, *const void) i32>((*api).ReplyEntry)
+        return call(backend, entry)
     }
 }
 
 extern c fn FuseReplyAttribute(
     request *void,
-    statValue *const void,
+    status *const void,
     expiration f64
 ) i32 as fuse_reply_attr {
-    // SAFETY: statValue is a live stat value for this call.
+    const session = requestSession(request)
+    const backend = backendRequest(request)
+    if isNull(session) || isNull(backend) return -38
+    // SAFETY: status is a call-scoped native stat record.
     unsafe {
-        return nativeReplyAttribute(request, statValue, expiration)
+        const api = (*session).ApiTable
+        const call = pointerCast<extern c fn(*void, *const void, f64) i32>(
+            (*api).ReplyAttribute
+        )
+        return call(backend, status, expiration)
     }
 }
 
@@ -544,9 +443,20 @@ extern c fn FuseReplyOpen(
     request *void,
     info *const void
 ) i32 as fuse_reply_open {
-    // SAFETY: info is a live FUSE2 file-info value for this call.
+    const session = requestSession(request)
+    const backend = backendRequest(request)
+    if isNull(session) || isNull(backend) || isNull(info) return -38
+    const converted = convertLegacyFileInfo(info)
+    if isNull(converted) return -38
+    // SAFETY: converted has the FUSE3 file-info layout for this call.
     unsafe {
-        return nativeReplyOpen(request, info)
+        const api = (*session).ApiTable
+        const call = pointerCast<extern c fn(*void, *const BackendFileInfo) i32>(
+            (*api).ReplyOpen
+        )
+        const result = call(backend, converted)
+        releaseBackendFileInfo(converted)
+        return result
     }
 }
 
@@ -555,9 +465,16 @@ extern c fn FuseReplyBuffer(
     buffer *const i8,
     size usize
 ) i32 as fuse_reply_buf {
-    // SAFETY: buffer has size live bytes for this call.
+    const session = requestSession(request)
+    const backend = backendRequest(request)
+    if isNull(session) || isNull(backend) return -38
+    // SAFETY: buffer has size readable bytes for this synchronous reply.
     unsafe {
-        return nativeReplyBuffer(request, buffer, size)
+        const api = (*session).ApiTable
+        const call = pointerCast<extern c fn(*void, *const i8, usize) i32>(
+            (*api).ReplyBuffer
+        )
+        return call(backend, buffer, size)
     }
 }
 
@@ -565,9 +482,14 @@ extern c fn FuseReplyReadLink(
     request *void,
     target *const i8
 ) i32 as fuse_reply_readlink {
-    // SAFETY: target is NUL-terminated and live for this call.
+    const session = requestSession(request)
+    const backend = backendRequest(request)
+    if isNull(session) || isNull(backend) return -38
+    // SAFETY: target is a NUL-terminated call-scoped string.
     unsafe {
-        return nativeReplyReadLink(request, target)
+        const api = (*session).ApiTable
+        const call = pointerCast<extern c fn(*void, *const i8) i32>((*api).ReplyReadLink)
+        return call(backend, target)
     }
 }
 
@@ -575,16 +497,28 @@ extern c fn FuseReplyExtendedAttribute(
     request *void,
     count usize
 ) i32 as fuse_reply_xattr {
-    // SAFETY: the opaque request remains live until the reply completes.
+    const session = requestSession(request)
+    const backend = backendRequest(request)
+    if isNull(session) || isNull(backend) return -38
+    // SAFETY: the request wrapper owns a live backend request and API table.
     unsafe {
-        return nativeReplyExtendedAttribute(request, count)
+        const api = (*session).ApiTable
+        const call = pointerCast<extern c fn(*void, usize) i32>(
+            (*api).ReplyExtendedAttribute
+        )
+        return call(backend, count)
     }
 }
 
 extern c fn FuseReplyWrite(request *void, count usize) i32 as fuse_reply_write {
-    // SAFETY: the opaque request remains live until the reply completes.
+    const session = requestSession(request)
+    const backend = backendRequest(request)
+    if isNull(session) || isNull(backend) return -38
+    // SAFETY: the request wrapper owns a live backend request and API table.
     unsafe {
-        return nativeReplyWrite(request, count)
+        const api = (*session).ApiTable
+        const call = pointerCast<extern c fn(*void, usize) i32>((*api).ReplyWrite)
+        return call(backend, count)
     }
 }
 
@@ -592,9 +526,16 @@ extern c fn FuseReplyFileSystem(
     request *void,
     value *const void
 ) i32 as fuse_reply_statfs {
-    // SAFETY: value is a live statvfs value for this call.
+    const session = requestSession(request)
+    const backend = backendRequest(request)
+    if isNull(session) || isNull(backend) return -38
+    // SAFETY: value is a call-scoped native statvfs record.
     unsafe {
-        return nativeReplyFileSystem(request, value)
+        const api = (*session).ApiTable
+        const call = pointerCast<extern c fn(*void, *const void) i32>(
+            (*api).ReplyFileSystem
+        )
+        return call(backend, value)
     }
 }
 
@@ -603,9 +544,22 @@ extern c fn FuseReplyCreate(
     entry *const void,
     info *const void
 ) i32 as fuse_reply_create {
-    // SAFETY: both FUSE2 values are live for this call.
+    const session = requestSession(request)
+    const backend = backendRequest(request)
+    if isNull(session) || isNull(backend) || isNull(entry) || isNull(info) return -38
+    const converted = convertLegacyFileInfo(info)
+    if isNull(converted) return -38
+    // SAFETY: entry and converted info have the FUSE3 reply layouts for this call.
     unsafe {
-        return nativeReplyCreate(request, entry, info)
+        const api = (*session).ApiTable
+        const call = pointerCast<extern c fn(
+            *void,
+            *const void,
+            *const BackendFileInfo
+        ) i32>((*api).ReplyCreate)
+        const result = call(backend, entry, converted)
+        releaseBackendFileInfo(converted)
+        return result
     }
 }
 
@@ -613,16 +567,29 @@ extern c fn FuseReplyLock(
     request *void,
     lock *const void
 ) i32 as fuse_reply_lock {
-    // SAFETY: lock points to a live flock structure for this synchronous reply.
+    const session = requestSession(request)
+    const backend = backendRequest(request)
+    if isNull(session) || isNull(backend) return -38
+    // SAFETY: lock is a call-scoped native flock record.
     unsafe {
-        return nativeReplyLock(request, lock)
+        const api = (*session).ApiTable
+        const call = pointerCast<extern c fn(*void, *const void) i32>((*api).ReplyLock)
+        return call(backend, lock)
     }
 }
 
-extern c fn FuseReplyBlockMap(request *void, index u64) i32 as fuse_reply_bmap {
-    // SAFETY: the opaque request remains live until the reply completes.
+extern c fn FuseReplyBlockMap(
+    request *void,
+    index u64
+) i32 as fuse_reply_bmap {
+    const session = requestSession(request)
+    const backend = backendRequest(request)
+    if isNull(session) || isNull(backend) return -38
+    // SAFETY: the request wrapper owns a live backend request and API table.
     unsafe {
-        return nativeReplyBlockMap(request, index)
+        const api = (*session).ApiTable
+        const call = pointerCast<extern c fn(*void, u64) i32>((*api).ReplyBlockMap)
+        return call(backend, index)
     }
 }
 
@@ -634,15 +601,20 @@ extern c fn FuseAddDirectoryEntry(
     status *const void,
     offset isize
 ) usize as fuse_add_direntry {
-    // SAFETY: buffers and status follow the call-scoped FUSE2 contract.
+    const session = requestSession(request)
+    const backend = backendRequest(request)
+    if isNull(session) || isNull(backend) return 0
+    // SAFETY: buffers and status remain live for this synchronous call.
     unsafe {
-        return nativeAddDirectoryEntry(
-            request,
-            buffer,
-            bufferSize,
-            name,
-            status,
-            offset
-        )
+        const api = (*session).ApiTable
+        const call = pointerCast<extern c fn(
+            *void,
+            *i8,
+            usize,
+            *const i8,
+            *const void,
+            isize
+        ) usize>((*api).AddDirectoryEntry)
+        return call(backend, buffer, bufferSize, name, status, offset)
     }
 }

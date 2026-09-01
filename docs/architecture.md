@@ -16,18 +16,20 @@ Pointing `libfuse.so.2` at `libfuse3.so` can therefore corrupt callback data.
 ## Translation model
 
 `libfuse2-compat` exposes the ABI and symbol versions of `libfuse.so.2` through
-Foundation functions. A native C adapter loads FUSE3 and converts ABI-sensitive
-structures. The final ELF link applies the historical version map and keeps the
-Foundation-to-C adapter symbols local.
+Foundation functions. Foundation loads FUSE3, converts ABI-sensitive structures,
+owns session state, and invokes callbacks. `extern c` declarations describe the
+boundary to libfuse3 and the required libc/libdl calls; no handwritten C
+implementation is linked into the library. The final ELF link applies the
+historical version map and keeps internal callback symbols local.
 
 1. `fuse_mount()` creates a compatibility channel and remembers the
    mountpoint. It intentionally delays the real mount.
 2. `fuse_lowlevel_new()` creates a FUSE3 session with bridge callbacks.
 3. `fuse_session_add_chan()` mounts the FUSE3 session at the remembered
    mountpoint.
-4. Requests arrive through FUSE3 callbacks. The C adapter converts ABI-sensitive
-   arguments, then Foundation invokes the original FUSE2 callback through a
-   checked C function pointer.
+4. Requests arrive through Foundation callbacks. Foundation converts
+   ABI-sensitive arguments and invokes the original FUSE2 callback through a C
+   function pointer checked by the compiler.
 5. FUSE2 reply functions convert data back and forward the reply to FUSE3.
 6. Channel removal and destruction are reordered into the lifecycle expected
    by FUSE3.
@@ -38,7 +40,7 @@ not share mutable session state.
 
 ## Backend loading
 
-The loader tries:
+The Foundation loader tries:
 
 1. `LIBFUSE2_COMPAT_BACKEND`, when explicitly set
 2. `libfuse3.so.4`

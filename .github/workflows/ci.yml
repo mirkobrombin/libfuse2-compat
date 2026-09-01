@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 env:
-  FOUNDATION_LANG_REF: 0d3f5426d7ae5c991c74fefb17d2b40e9c69f903
+  FOUNDATION_LANG_REF: b2ec0c369fcda3d5db2b6ccd0282b89645f6ab95
 
 jobs:
   test:
@@ -17,6 +17,7 @@ jobs:
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04]
         compiler: [gcc, clang]
+        backend: [llvm, c]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -44,10 +45,15 @@ jobs:
       - name: Build and test
         env:
           CC: ${{ matrix.compiler }}
+          FOUNDATION_BACKEND: ${{ matrix.backend }}
           FOUNDATIONC: ${{ github.workspace }}/.foundation-lang/build/foundationc
         run: make check
 
   sanitizers:
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [llvm, c]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -76,6 +82,7 @@ jobs:
         env:
           CFLAGS: -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer
           LDFLAGS: -fsanitize=address,undefined
+          FOUNDATION_BACKEND: ${{ matrix.backend }}
           FOUNDATIONC: ${{ github.workspace }}/.foundation-lang/build/foundationc
         run: make check
 

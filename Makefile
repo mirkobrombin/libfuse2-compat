@@ -3,6 +3,7 @@ AR ?= ar
 INSTALL ?= install
 PKG_CONFIG ?= pkg-config
 FOUNDATIONC ?= foundationc
+FOUNDATION_BACKEND ?= llvm
 
 PREFIX ?= /usr/local
 LIBDIR ?= $(PREFIX)/lib
@@ -14,7 +15,6 @@ LDFLAGS ?=
 
 WARNINGS := -Wall -Wextra -Wpedantic -Wconversion -Wshadow \
 	-Wstrict-prototypes -Wmissing-prototypes -Werror=implicit-function-declaration
-COMMON_CFLAGS := -std=c11 -fPIC -fvisibility=hidden -D_GNU_SOURCE $(WARNINGS)
 LIBS := -ldl -lpthread
 LIB_HARDENING := -Wl,-z,defs -Wl,-z,relro,-z,now
 
@@ -23,10 +23,9 @@ TEST_BUILD_DIR := tests/build
 REAL_LIB := $(BUILD_DIR)/libfuse.so.2.9.9
 SONAME_LINK := $(BUILD_DIR)/libfuse.so.2
 DEV_LINK := $(BUILD_DIR)/libfuse.so
-OBJECTS := $(BUILD_DIR)/bridge.o $(BUILD_DIR)/fuse3_loader.o
 FOUNDATION_BUILD_DIR := $(BUILD_DIR)/foundation
 FOUNDATION_ARCHIVE := $(FOUNDATION_BUILD_DIR)/lib/libfuse.a
-FOUNDATION_INPUTS := foundation.package foundation.lock src/bridge.fn
+FOUNDATION_INPUTS := foundation.package foundation.lock $(wildcard src/*.fn)
 
 .PHONY: all clean check check-unit check-symbols check-system check-abi \
 	check-legacy-loader check-appimage install uninstall
@@ -36,16 +35,9 @@ all: $(REAL_LIB) $(SONAME_LINK) $(DEV_LINK)
 $(BUILD_DIR) $(TEST_BUILD_DIR):
 	mkdir -p $@
 
-$(BUILD_DIR)/%.o: src/%.c | $(BUILD_DIR)
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(COMMON_CFLAGS) -Isrc -c $< -o $@
-
-$(BUILD_DIR)/bridge.o: src/bridge_native.h src/fuse2_exports.h src/fuse3_loader.h
-
-$(FOUNDATION_ARCHIVE): $(FOUNDATION_INPUTS) $(OBJECTS)
+$(FOUNDATION_ARCHIVE): $(FOUNDATION_INPUTS)
 	$(FOUNDATIONC) build-library . -o $(FOUNDATION_BUILD_DIR) \
-		--kind static --pic \
-		--native $(BUILD_DIR)/bridge.o \
-		--native $(BUILD_DIR)/fuse3_loader.o
+		--kind static --pic --backend $(FOUNDATION_BACKEND)
 
 $(REAL_LIB): $(FOUNDATION_ARCHIVE) src/libfuse2-compat.map
 	$(CC) -shared $(LDFLAGS) $(LIB_HARDENING) -Wl,-soname,libfuse.so.2 \

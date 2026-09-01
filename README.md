@@ -56,9 +56,11 @@ make check
 ```
 
 Set `FOUNDATIONC=/path/to/foundationc` when the compiler is not on `PATH`.
-Foundation owns the exported FUSE2 entry points. The C sources remain the native
-FUSE3 loader and ABI translation adapter linked behind that boundary. Legacy
-callbacks return through Foundation after the adapter converts their arguments.
+Foundation implements the exported FUSE2 entry points, FUSE3 discovery, ABI
+translation, session lifecycle, and callbacks. Its `extern c` declarations are
+the boundary to libfuse3 and the required libc/libdl calls. The remaining C
+sources are test and ABI fixtures; no handwritten C implementation is linked
+into the library.
 
 ## Test without installing
 

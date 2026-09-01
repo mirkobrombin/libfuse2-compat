@@ -1,0 +1,443 @@
+// SPDX-License-Identifier: LGPL-2.1-or-later
+package libfuse2.compat
+
+fn setErrno(value i32) void {
+    // SAFETY: libc and __errno_location use the Linux C ABI.
+    unsafe {
+        const handle = openDynamicLibrary(cString("libc.so.6"), 2)
+        if isNull(handle) return
+        const symbol = loadSymbol(handle, cString("__errno_location"), true)
+        if !isNull(symbol) {
+            const address = pointerCast<extern c fn() *i32>(symbol)
+            *address() = value
+        }
+        discard closeDynamicLibrary(handle)
+    }
+}
+
+fn readErrno() i32 {
+    // SAFETY: libc and __errno_location use the Linux C ABI.
+    unsafe {
+        const handle = openDynamicLibrary(cString("libc.so.6"), 2)
+        if isNull(handle) return 0
+        const symbol = loadSymbol(handle, cString("__errno_location"), true)
+        if isNull(symbol) {
+            discard closeDynamicLibrary(handle)
+            return 0
+        }
+        const address = pointerCast<extern c fn() *i32>(symbol)
+        const value = *address()
+        discard closeDynamicLibrary(handle)
+        return value
+    }
+}
+
+fn emptyPointer() *void {
+    // SAFETY: this constructs the null opaque pointer used by C ABI failures.
+    unsafe {
+        return null<*void>()
+    }
+}
+
+fn loggingEnabled() bool {
+    // SAFETY: getenv returns a live NUL-terminated value owned by the process environment.
+    unsafe {
+        const value = environmentValue(cString("LIBFUSE2_COMPAT_LOG"))
+        if isNull(value) || *value == 0 return false
+        if *value != 48 return true
+        return *(value + 1) != 0
+    }
+}
+
+fn cStringLength(value *const u8) usize {
+    // SAFETY: callers provide a live NUL-terminated C string.
+    unsafe {
+        var length usize = 0
+        while *(value + length) != 0 {
+            length += 1
+        }
+        return length
+    }
+}
+
+fn logBackend(name *const u8) void {
+    if !loggingEnabled() return
+    // SAFETY: write reads the static prefix, backend name, and newline for their measured sizes.
+    unsafe {
+        const prefix = cString("libfuse2-compat: using backend ")
+        discard writeDescriptor(2, prefix, cStringLength(prefix))
+        discard writeDescriptor(2, name, cStringLength(name))
+        discard writeDescriptor(2, cString("\n"), 1)
+    }
+}
+
+fn openBackendCandidate(name *const u8) *void {
+    // SAFETY: name is NUL-terminated and the flags are Linux RTLD_NOW with NOLOAD or NODELETE.
+    unsafe {
+        const existing = openDynamicLibrary(name, 6)
+        if !isNull(existing) return existing
+        const handle = openDynamicLibrary(name, 4098)
+        if !isNull(handle) {
+            logBackend(name)
+        }
+        return handle
+    }
+}
+
+fn openBackendHandle() *void {
+    // SAFETY: the environment value and library names are NUL-terminated.
+    unsafe {
+        const override = environmentValue(cString("LIBFUSE2_COMPAT_BACKEND"))
+        if !isNull(override) && *override != 0 {
+            return openBackendCandidate(override)
+        }
+        var handle = openBackendCandidate(cString("libfuse3.so.4"))
+        if isNull(handle) {
+            handle = openBackendCandidate(cString("libfuse3.so.3"))
+        }
+        return handle
+    }
+}
+
+fn loadSymbol(handle *void, name *const u8, required bool) *void {
+    // SAFETY: handle is a live dlopen handle and name is NUL-terminated.
+    unsafe {
+        discard dynamicError()
+        const value = dynamicSymbol(handle, name)
+        const error = dynamicError()
+        if !isNull(error) && required return null<*void>()
+        return value
+    }
+}
+
+fn closeApi(api *Api) void {
+    if isNull(api) return
+    // SAFETY: api and its handle were allocated by openApi.
+    unsafe {
+        if !isNull((*api).Handle) {
+            discard closeDynamicLibrary((*api).Handle)
+        }
+        releaseMemory(api)
+    }
+}
+
+fn openApi() *Api {
+    // SAFETY: calloc returns aligned storage for Api and every field is written here.
+    unsafe {
+        const handle = openBackendHandle()
+        if isNull(handle) return null<*Api>()
+        const raw = allocateZeroed(1, sizeOf<Api>())
+        if isNull(raw) {
+            discard closeDynamicLibrary(handle)
+            return null<*Api>()
+        }
+        const api = pointerCast<*Api>(raw)
+        const optParse = loadSymbol(handle, cString("fuse_opt_parse"), true)
+        const optAddArg = loadSymbol(handle, cString("fuse_opt_add_arg"), true)
+        const optFreeArgs = loadSymbol(handle, cString("fuse_opt_free_args"), true)
+        const parseCommandLine = loadSymbol(handle, cString("fuse_parse_cmdline"), true)
+        const sessionNew = loadSymbol(handle, cString("fuse_session_new"), true)
+        const sessionMount = loadSymbol(handle, cString("fuse_session_mount"), true)
+        const sessionUnmount = loadSymbol(handle, cString("fuse_session_unmount"), true)
+        const sessionLoop = loadSymbol(handle, cString("fuse_session_loop"), true)
+        const sessionDestroy = loadSymbol(handle, cString("fuse_session_destroy"), true)
+        const setSignalHandlers = loadSymbol(
+            handle,
+            cString("fuse_set_signal_handlers"),
+            true
+        )
+        const removeSignalHandlers = loadSymbol(
+            handle,
+            cString("fuse_remove_signal_handlers"),
+            true
+        )
+        const daemonize = loadSymbol(handle, cString("fuse_daemonize"), true)
+        const requestUserData = loadSymbol(handle, cString("fuse_req_userdata"), true)
+        const replyError = loadSymbol(handle, cString("fuse_reply_err"), true)
+        const replyNone = loadSymbol(handle, cString("fuse_reply_none"), true)
+        const replyEntry = loadSymbol(handle, cString("fuse_reply_entry"), true)
+        const replyAttribute = loadSymbol(handle, cString("fuse_reply_attr"), true)
+        const replyOpen = loadSymbol(handle, cString("fuse_reply_open"), true)
+        const replyBuffer = loadSymbol(handle, cString("fuse_reply_buf"), true)
+        const replyReadLink = loadSymbol(handle, cString("fuse_reply_readlink"), true)
+        const replyExtendedAttribute = loadSymbol(handle, cString("fuse_reply_xattr"), true)
+        const replyWrite = loadSymbol(handle, cString("fuse_reply_write"), true)
+        const replyFileSystem = loadSymbol(handle, cString("fuse_reply_statfs"), true)
+        const replyCreate = loadSymbol(handle, cString("fuse_reply_create"), true)
+        const replyLock = loadSymbol(handle, cString("fuse_reply_lock"), true)
+        const replyBlockMap = loadSymbol(handle, cString("fuse_reply_bmap"), true)
+        const addDirectoryEntry = loadSymbol(handle, cString("fuse_add_direntry"), true)
+        if isNull(optParse) || isNull(optAddArg) || isNull(optFreeArgs) ||
+            isNull(parseCommandLine) || isNull(sessionNew) || isNull(sessionMount) ||
+            isNull(sessionUnmount) || isNull(sessionLoop) || isNull(sessionDestroy) ||
+            isNull(setSignalHandlers) || isNull(removeSignalHandlers) || isNull(daemonize) ||
+            isNull(requestUserData) || isNull(replyError) || isNull(replyNone) ||
+            isNull(replyEntry) || isNull(replyAttribute) || isNull(replyOpen) ||
+            isNull(replyBuffer) || isNull(replyReadLink) || isNull(replyExtendedAttribute) ||
+            isNull(replyWrite) || isNull(replyFileSystem) || isNull(replyCreate) ||
+            isNull(replyLock) || isNull(replyBlockMap) || isNull(addDirectoryEntry) {
+            discard closeDynamicLibrary(handle)
+            releaseMemory(api)
+            return null<*Api>()
+        }
+        discard replace (*api).Handle with handle
+        discard replace (*api).OptParse with optParse
+        discard replace (*api).OptAddArg with optAddArg
+        discard replace (*api).OptFreeArgs with optFreeArgs
+        discard replace (*api).ParseCommandLine with parseCommandLine
+        discard replace (*api).SessionNew with sessionNew
+        discard replace (*api).SessionMount with sessionMount
+        discard replace (*api).SessionUnmount with sessionUnmount
+        discard replace (*api).SessionLoop with sessionLoop
+        discard replace (*api).SessionDestroy with sessionDestroy
+        discard replace (*api).SetSignalHandlers with setSignalHandlers
+        discard replace (*api).RemoveSignalHandlers with removeSignalHandlers
+        discard replace (*api).Daemonize with daemonize
+        discard replace (*api).RequestUserData with requestUserData
+        discard replace (*api).ReplyError with replyError
+        discard replace (*api).ReplyNone with replyNone
+        discard replace (*api).ReplyEntry with replyEntry
+        discard replace (*api).ReplyAttribute with replyAttribute
+        discard replace (*api).ReplyOpen with replyOpen
+        discard replace (*api).ReplyBuffer with replyBuffer
+        discard replace (*api).ReplyReadLink with replyReadLink
+        discard replace (*api).ReplyExtendedAttribute with replyExtendedAttribute
+        discard replace (*api).ReplyWrite with replyWrite
+        discard replace (*api).ReplyFileSystem with replyFileSystem
+        discard replace (*api).ReplyCreate with replyCreate
+        discard replace (*api).ReplyLock with replyLock
+        discard replace (*api).ReplyBlockMap with replyBlockMap
+        discard replace (*api).AddDirectoryEntry with addDirectoryEntry
+        discard replace (*api).SessionExit with loadSymbol(
+            handle,
+            cString("fuse_session_exit"),
+            false
+        )
+        discard replace (*api).SessionExited with loadSymbol(
+            handle,
+            cString("fuse_session_exited"),
+            false
+        )
+        discard replace (*api).SessionReset with loadSymbol(
+            handle,
+            cString("fuse_session_reset"),
+            false
+        )
+        return api
+    }
+}
+
+fn validSession(session *Session) bool {
+    if isNull(session) return false
+    // SAFETY: callers pass handles created by this package.
+    unsafe {
+        return (*session).Magic == 5058179356414923598 &&
+            !isNull((*session).Backend) &&
+            !isNull((*session).ApiTable)
+    }
+}
+
+fn validChannel(channel *CompatChannel) bool {
+    if isNull(channel) return false
+    // SAFETY: callers pass handles created by this package.
+    unsafe {
+        return (*channel).Magic == 5058179287744597580 &&
+            !isNull((*channel).Mountpoint)
+    }
+}
+
+fn validRequest(request *Request) bool {
+    if isNull(request) return false
+    // SAFETY: request points to a callback-scoped wrapper created below.
+    unsafe {
+        return (*request).Magic == 5058195789161252179 &&
+            !isNull((*request).Backend) &&
+            validSession(pointerCast<*Session>((*request).SessionValue))
+    }
+}
+
+fn requestSession(request *void) *Session {
+    // SAFETY: exported reply functions receive a callback-scoped Request pointer.
+    unsafe {
+        if isNull(request) return null<*Session>()
+        const legacy = pointerCast<*Request>(request)
+        if !validRequest(legacy) return null<*Session>()
+        return pointerCast<*Session>((*legacy).SessionValue)
+    }
+}
+
+fn backendRequest(request *void) *void {
+    // SAFETY: exported reply functions receive a callback-scoped Request pointer.
+    unsafe {
+        if isNull(request) return null<*void>()
+        const legacy = pointerCast<*Request>(request)
+        if !validRequest(legacy) return null<*void>()
+        return (*legacy).Backend
+    }
+}
+
+fn sessionFromBackendRequest(request *void) *Session {
+    // SAFETY: the loaded symbol has the libfuse3 request-userdata signature.
+    unsafe {
+        const handle = openBackendHandle()
+        if isNull(handle) return null<*Session>()
+        const symbol = loadSymbol(handle, cString("fuse_req_userdata"), true)
+        if isNull(symbol) {
+            discard closeDynamicLibrary(handle)
+            return null<*Session>()
+        }
+        const lookup = pointerCast<extern c fn(*void) *void>(symbol)
+        const value = lookup(request)
+        discard closeDynamicLibrary(handle)
+        if isNull(value) return null<*Session>()
+        const session = pointerCast<*Session>(value)
+        if !validSession(session) return null<*Session>()
+        return session
+    }
+}
+
+fn copyLegacyOperations(source *const void, size usize) *LegacyOps {
+    // SAFETY: source contains size readable bytes from the FUSE2 operation table.
+    unsafe {
+        const raw = allocateZeroed(1, sizeOf<LegacyOps>())
+        if isNull(raw) return null<*LegacyOps>()
+        const operations = pointerCast<*LegacyOps>(raw)
+        var copySize = size
+        if copySize > sizeOf<LegacyOps>() {
+            copySize = sizeOf<LegacyOps>()
+        }
+        discard copyMemory(operations, source, copySize)
+        return operations
+    }
+}
+
+fn convertFileInfo(source *void) *LegacyFileInfo {
+    // SAFETY: source is a live FUSE3 file-info pointer for this callback.
+    unsafe {
+        if isNull(source) return null<*LegacyFileInfo>()
+        const raw = allocateZeroed(1, sizeOf<LegacyFileInfo>())
+        if isNull(raw) return null<*LegacyFileInfo>()
+        const legacy = pointerCast<*LegacyFileInfo>(raw)
+        const backend = pointerCast<*BackendFileInfo>(source)
+        discard replace (*legacy).Flags with (*backend).Flags
+        discard replace (*legacy).WritePage with 1 if ((*backend).Bits & 1) != 0 else 0
+        discard replace (*legacy).Bits with ((*backend).Bits >> 1) & 31
+        discard replace (*legacy).Handle with (*backend).Handle
+        discard replace (*legacy).LockOwner with (*backend).LockOwner
+        return legacy
+    }
+}
+
+fn copyFileInfoBack(source *LegacyFileInfo, destination *void) void {
+    if isNull(source) || isNull(destination) return
+    // SAFETY: both values are live file-info layouts for this callback.
+    unsafe {
+        const backend = pointerCast<*BackendFileInfo>(destination)
+        const writePage u32 = 1 if (*source).WritePage != 0 else 0
+        const usedBits u32 = 63
+        const bits = ((*backend).Bits & ~usedBits) | writePage |
+            (((*source).Bits & 31) << 1)
+        discard replace (*backend).Flags with (*source).Flags
+        discard replace (*backend).Bits with bits
+        discard replace (*backend).Handle with (*source).Handle
+        discard replace (*backend).LockOwner with (*source).LockOwner
+    }
+}
+
+fn releaseFileInfo(value *LegacyFileInfo) void {
+    if isNull(value) return
+    // SAFETY: value was allocated by convertFileInfo.
+    unsafe {
+        releaseMemory(value)
+    }
+}
+
+fn convertLegacyFileInfo(source *const void) *BackendFileInfo {
+    // SAFETY: source is a live FUSE2 file-info pointer for this reply.
+    unsafe {
+        if isNull(source) return null<*BackendFileInfo>()
+        const raw = allocateZeroed(1, sizeOf<BackendFileInfo>())
+        if isNull(raw) return null<*BackendFileInfo>()
+        const backend = pointerCast<*BackendFileInfo>(raw)
+        const legacy = pointerCast<*const LegacyFileInfo>(source)
+        const writePage u32 = 1 if (*legacy).WritePage != 0 else 0
+        const bits = writePage | (((*legacy).Bits & 31) << 1)
+        discard replace (*backend).Flags with (*legacy).Flags
+        discard replace (*backend).Bits with bits
+        discard replace (*backend).Handle with (*legacy).Handle
+        discard replace (*backend).LockOwner with (*legacy).LockOwner
+        return backend
+    }
+}
+
+fn releaseBackendFileInfo(value *BackendFileInfo) void {
+    if isNull(value) return
+    // SAFETY: value was allocated by convertLegacyFileInfo.
+    unsafe {
+        releaseMemory(value)
+    }
+}
+
+fn configureBackendOperations(legacy *LegacyOps) *BackendOps {
+    // SAFETY: both operation tables use their declared stable C layouts.
+    unsafe {
+        const raw = allocateZeroed(1, sizeOf<BackendOps>())
+        if isNull(raw) return null<*BackendOps>()
+        const backend = pointerCast<*BackendOps>(raw)
+        if !isNull((*legacy).Init) {
+            discard replace (*backend).Init with bridgeInit
+        }
+        if !isNull((*legacy).Destroy) {
+            discard replace (*backend).Destroy with bridgeDestroy
+        }
+        if !isNull((*legacy).Lookup) {
+            discard replace (*backend).Lookup with bridgeLookup
+        }
+        if !isNull((*legacy).Forget) {
+            discard replace (*backend).Forget with bridgeForget
+        }
+        if !isNull((*legacy).GetAttribute) {
+            discard replace (*backend).GetAttribute with bridgeGetAttribute
+        }
+        if !isNull((*legacy).SetAttribute) {
+            discard replace (*backend).SetAttribute with bridgeSetAttribute
+        }
+        if !isNull((*legacy).ReadLink) {
+            discard replace (*backend).ReadLink with bridgeReadLink
+        }
+        if !isNull((*legacy).Open) {
+            discard replace (*backend).Open with bridgeOpen
+        }
+        if !isNull((*legacy).Read) {
+            discard replace (*backend).Read with bridgeRead
+        }
+        if !isNull((*legacy).Write) {
+            discard replace (*backend).Write with bridgeWrite
+        }
+        if !isNull((*legacy).Release) {
+            discard replace (*backend).Release with bridgeRelease
+        }
+        if !isNull((*legacy).OpenDirectory) {
+            discard replace (*backend).OpenDirectory with bridgeOpenDirectory
+        }
+        if !isNull((*legacy).ReadDirectory) {
+            discard replace (*backend).ReadDirectory with bridgeReadDirectory
+        }
+        if !isNull((*legacy).ReleaseDirectory) {
+            discard replace (*backend).ReleaseDirectory with bridgeReleaseDirectory
+        }
+        if !isNull((*legacy).FileSystemStatus) {
+            discard replace (*backend).FileSystemStatus with bridgeFileSystemStatus
+        }
+        if !isNull((*legacy).GetExtendedAttribute) {
+            discard replace (*backend).GetExtendedAttribute with bridgeGetExtendedAttribute
+        }
+        if !isNull((*legacy).ListExtendedAttributes) {
+            discard replace (*backend).ListExtendedAttributes with bridgeListExtendedAttributes
+        }
+        if !isNull((*legacy).Create) {
+            discard replace (*backend).Create with bridgeCreate
+        }
+        return backend
+    }
+}

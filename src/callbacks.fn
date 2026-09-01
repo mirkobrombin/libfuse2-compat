@@ -1,0 +1,394 @@
+// SPDX-License-Identifier: LGPL-2.1-or-later
+package libfuse2.compat
+
+extern c fn bridgeInit(userData *void, connection *void) void as fuse2_foundation_bridge_init {
+    if isNull(userData) || isNull(connection) return
+    // SAFETY: FUSE3 passes the Session userdata and a live connection for this call.
+    unsafe {
+        const session = pointerCast<*Session>(userData)
+        if !validSession(session) return
+        const raw = allocateZeroed(1, 128)
+        if isNull(raw) return
+        const legacy = pointerCast<*LegacyConnectionPrefix>(raw)
+        const backend = pointerCast<*BackendConnectionPrefix>(connection)
+        discard replace (*legacy).ProtocolMajor with (*backend).ProtocolMajor
+        discard replace (*legacy).ProtocolMinor with (*backend).ProtocolMinor
+        discard replace (*legacy).AsyncRead with 1 if ((*backend).Capable & 1) != 0 else 0
+        discard replace (*legacy).MaxWrite with (*backend).MaxWrite
+        discard replace (*legacy).MaxReadAhead with (*backend).MaxReadAhead
+        discard replace (*legacy).Capable with (*backend).Capable
+        discard replace (*legacy).Want with (*backend).Want
+        discard replace (*legacy).MaxBackground with (*backend).MaxBackground
+        discard replace (*legacy).CongestionThreshold with (*backend).CongestionThreshold
+        const callback = (*(*session).Operations).Init
+        callback((*session).UserData, raw)
+        var want = (*legacy).Want
+        if (*legacy).AsyncRead != 0 {
+            want = want | 1
+        } else {
+            const asyncRead u32 = 1
+            want = want & ~asyncRead
+        }
+        discard replace (*backend).MaxWrite with (*legacy).MaxWrite
+        discard replace (*backend).MaxReadAhead with (*legacy).MaxReadAhead
+        discard replace (*backend).Want with want
+        discard replace (*backend).MaxBackground with (*legacy).MaxBackground
+        discard replace (*backend).CongestionThreshold with (*legacy).CongestionThreshold
+        releaseMemory(raw)
+    }
+}
+
+extern c fn bridgeDestroy(userData *void) void as fuse2_foundation_bridge_destroy {
+    if isNull(userData) return
+    // SAFETY: FUSE3 passes the Session userdata while the session remains live.
+    unsafe {
+        const session = pointerCast<*Session>(userData)
+        if !validSession(session) return
+        const callback = (*(*session).Operations).Destroy
+        callback((*session).UserData)
+    }
+}
+
+extern c fn bridgeLookup(
+    backendRequestValue *void,
+    parent u64,
+    name *const i8
+) void as fuse2_foundation_bridge_lookup {
+    const session = sessionFromBackendRequest(backendRequestValue)
+    if isNull(session) return
+    var request = Request {
+        Magic = 5058195789161252179
+        Backend = backendRequestValue
+        SessionValue = session
+    }
+    // SAFETY: the legacy callback and request wrapper remain live for this call.
+    unsafe {
+        const callback = (*(*session).Operations).Lookup
+        callback(&request, parent, name)
+    }
+}
+
+extern c fn bridgeForget(
+    backendRequestValue *void,
+    inode u64,
+    lookupCount u64
+) void as fuse2_foundation_bridge_forget {
+    const session = sessionFromBackendRequest(backendRequestValue)
+    if isNull(session) return
+    var request = Request {
+        Magic = 5058195789161252179
+        Backend = backendRequestValue
+        SessionValue = session
+    }
+    // SAFETY: the legacy callback and request wrapper remain live for this call.
+    unsafe {
+        const callback = (*(*session).Operations).Forget
+        callback(&request, inode, lookupCount)
+    }
+}
+
+extern c fn bridgeGetAttribute(
+    backendRequestValue *void,
+    inode u64,
+    info *void
+) void as fuse2_foundation_bridge_getattr {
+    const session = sessionFromBackendRequest(backendRequestValue)
+    if isNull(session) return
+    const legacy = convertFileInfo(info)
+    var request = Request {
+        Magic = 5058195789161252179
+        Backend = backendRequestValue
+        SessionValue = session
+    }
+    // SAFETY: all callback values remain live until the conversion is copied back.
+    unsafe {
+        const callback = (*(*session).Operations).GetAttribute
+        callback(&request, inode, legacy)
+    }
+    copyFileInfoBack(legacy, info)
+    releaseFileInfo(legacy)
+}
+
+extern c fn bridgeSetAttribute(
+    backendRequestValue *void,
+    inode u64,
+    status *void,
+    fields i32,
+    info *void
+) void as fuse2_foundation_bridge_setattr {
+    const session = sessionFromBackendRequest(backendRequestValue)
+    if isNull(session) return
+    const legacy = convertFileInfo(info)
+    var request = Request {
+        Magic = 5058195789161252179
+        Backend = backendRequestValue
+        SessionValue = session
+    }
+    // SAFETY: all callback values remain live until the conversion is copied back.
+    unsafe {
+        const callback = (*(*session).Operations).SetAttribute
+        callback(&request, inode, status, fields, legacy)
+    }
+    copyFileInfoBack(legacy, info)
+    releaseFileInfo(legacy)
+}
+
+extern c fn bridgeReadLink(
+    backendRequestValue *void,
+    inode u64
+) void as fuse2_foundation_bridge_readlink {
+    const session = sessionFromBackendRequest(backendRequestValue)
+    if isNull(session) return
+    var request = Request {
+        Magic = 5058195789161252179
+        Backend = backendRequestValue
+        SessionValue = session
+    }
+    // SAFETY: the legacy callback and request wrapper remain live for this call.
+    unsafe {
+        const callback = (*(*session).Operations).ReadLink
+        callback(&request, inode)
+    }
+}
+
+extern c fn bridgeOpen(
+    backendRequestValue *void,
+    inode u64,
+    info *void
+) void as fuse2_foundation_bridge_open {
+    const session = sessionFromBackendRequest(backendRequestValue)
+    if isNull(session) return
+    const legacy = convertFileInfo(info)
+    var request = Request {
+        Magic = 5058195789161252179
+        Backend = backendRequestValue
+        SessionValue = session
+    }
+    // SAFETY: all callback values remain live until the conversion is copied back.
+    unsafe {
+        const callback = (*(*session).Operations).Open
+        callback(&request, inode, legacy)
+    }
+    copyFileInfoBack(legacy, info)
+    releaseFileInfo(legacy)
+}
+
+extern c fn bridgeRead(
+    backendRequestValue *void,
+    inode u64,
+    size usize,
+    offset isize,
+    info *void
+) void as fuse2_foundation_bridge_read {
+    const session = sessionFromBackendRequest(backendRequestValue)
+    if isNull(session) return
+    const legacy = convertFileInfo(info)
+    var request = Request {
+        Magic = 5058195789161252179
+        Backend = backendRequestValue
+        SessionValue = session
+    }
+    // SAFETY: all callback values remain live until the conversion is copied back.
+    unsafe {
+        const callback = (*(*session).Operations).Read
+        callback(&request, inode, size, offset, legacy)
+    }
+    copyFileInfoBack(legacy, info)
+    releaseFileInfo(legacy)
+}
+
+extern c fn bridgeWrite(
+    backendRequestValue *void,
+    inode u64,
+    buffer *const i8,
+    size usize,
+    offset isize,
+    info *void
+) void as fuse2_foundation_bridge_write {
+    const session = sessionFromBackendRequest(backendRequestValue)
+    if isNull(session) return
+    const legacy = convertFileInfo(info)
+    var request = Request {
+        Magic = 5058195789161252179
+        Backend = backendRequestValue
+        SessionValue = session
+    }
+    // SAFETY: all callback values remain live until the conversion is copied back.
+    unsafe {
+        const callback = (*(*session).Operations).Write
+        callback(&request, inode, buffer, size, offset, legacy)
+    }
+    copyFileInfoBack(legacy, info)
+    releaseFileInfo(legacy)
+}
+
+extern c fn bridgeRelease(
+    backendRequestValue *void,
+    inode u64,
+    info *void
+) void as fuse2_foundation_bridge_release {
+    const session = sessionFromBackendRequest(backendRequestValue)
+    if isNull(session) return
+    const legacy = convertFileInfo(info)
+    var request = Request {
+        Magic = 5058195789161252179
+        Backend = backendRequestValue
+        SessionValue = session
+    }
+    // SAFETY: all callback values remain live until the conversion is copied back.
+    unsafe {
+        const callback = (*(*session).Operations).Release
+        callback(&request, inode, legacy)
+    }
+    copyFileInfoBack(legacy, info)
+    releaseFileInfo(legacy)
+}
+
+extern c fn bridgeOpenDirectory(
+    backendRequestValue *void,
+    inode u64,
+    info *void
+) void as fuse2_foundation_bridge_opendir {
+    const session = sessionFromBackendRequest(backendRequestValue)
+    if isNull(session) return
+    const legacy = convertFileInfo(info)
+    var request = Request {
+        Magic = 5058195789161252179
+        Backend = backendRequestValue
+        SessionValue = session
+    }
+    // SAFETY: all callback values remain live until the conversion is copied back.
+    unsafe {
+        const callback = (*(*session).Operations).OpenDirectory
+        callback(&request, inode, legacy)
+    }
+    copyFileInfoBack(legacy, info)
+    releaseFileInfo(legacy)
+}
+
+extern c fn bridgeReadDirectory(
+    backendRequestValue *void,
+    inode u64,
+    size usize,
+    offset isize,
+    info *void
+) void as fuse2_foundation_bridge_readdir {
+    const session = sessionFromBackendRequest(backendRequestValue)
+    if isNull(session) return
+    const legacy = convertFileInfo(info)
+    var request = Request {
+        Magic = 5058195789161252179
+        Backend = backendRequestValue
+        SessionValue = session
+    }
+    // SAFETY: all callback values remain live until the conversion is copied back.
+    unsafe {
+        const callback = (*(*session).Operations).ReadDirectory
+        callback(&request, inode, size, offset, legacy)
+    }
+    copyFileInfoBack(legacy, info)
+    releaseFileInfo(legacy)
+}
+
+extern c fn bridgeReleaseDirectory(
+    backendRequestValue *void,
+    inode u64,
+    info *void
+) void as fuse2_foundation_bridge_releasedir {
+    const session = sessionFromBackendRequest(backendRequestValue)
+    if isNull(session) return
+    const legacy = convertFileInfo(info)
+    var request = Request {
+        Magic = 5058195789161252179
+        Backend = backendRequestValue
+        SessionValue = session
+    }
+    // SAFETY: all callback values remain live until the conversion is copied back.
+    unsafe {
+        const callback = (*(*session).Operations).ReleaseDirectory
+        callback(&request, inode, legacy)
+    }
+    copyFileInfoBack(legacy, info)
+    releaseFileInfo(legacy)
+}
+
+extern c fn bridgeFileSystemStatus(
+    backendRequestValue *void,
+    inode u64
+) void as fuse2_foundation_bridge_statfs {
+    const session = sessionFromBackendRequest(backendRequestValue)
+    if isNull(session) return
+    var request = Request {
+        Magic = 5058195789161252179
+        Backend = backendRequestValue
+        SessionValue = session
+    }
+    // SAFETY: the legacy callback and request wrapper remain live for this call.
+    unsafe {
+        const callback = (*(*session).Operations).FileSystemStatus
+        callback(&request, inode)
+    }
+}
+
+extern c fn bridgeGetExtendedAttribute(
+    backendRequestValue *void,
+    inode u64,
+    name *const i8,
+    size usize
+) void as fuse2_foundation_bridge_getxattr {
+    const session = sessionFromBackendRequest(backendRequestValue)
+    if isNull(session) return
+    var request = Request {
+        Magic = 5058195789161252179
+        Backend = backendRequestValue
+        SessionValue = session
+    }
+    // SAFETY: the legacy callback and request wrapper remain live for this call.
+    unsafe {
+        const callback = (*(*session).Operations).GetExtendedAttribute
+        callback(&request, inode, name, size)
+    }
+}
+
+extern c fn bridgeListExtendedAttributes(
+    backendRequestValue *void,
+    inode u64,
+    size usize
+) void as fuse2_foundation_bridge_listxattr {
+    const session = sessionFromBackendRequest(backendRequestValue)
+    if isNull(session) return
+    var request = Request {
+        Magic = 5058195789161252179
+        Backend = backendRequestValue
+        SessionValue = session
+    }
+    // SAFETY: the legacy callback and request wrapper remain live for this call.
+    unsafe {
+        const callback = (*(*session).Operations).ListExtendedAttributes
+        callback(&request, inode, size)
+    }
+}
+
+extern c fn bridgeCreate(
+    backendRequestValue *void,
+    parent u64,
+    name *const i8,
+    mode u32,
+    info *void
+) void as fuse2_foundation_bridge_create {
+    const session = sessionFromBackendRequest(backendRequestValue)
+    if isNull(session) return
+    const legacy = convertFileInfo(info)
+    var request = Request {
+        Magic = 5058195789161252179
+        Backend = backendRequestValue
+        SessionValue = session
+    }
+    // SAFETY: all callback values remain live until the conversion is copied back.
+    unsafe {
+        const callback = (*(*session).Operations).Create
+        callback(&request, parent, name, mode, legacy)
+    }
+    copyFileInfoBack(legacy, info)
+    releaseFileInfo(legacy)
+}
