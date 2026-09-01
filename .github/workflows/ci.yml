@@ -37,6 +37,7 @@ jobs:
       - name: Build Foundation Lang
         run: |
           cmake -S .foundation-lang -B .foundation-lang/build -G Ninja \
+            -DCMAKE_CXX_COMPILER=clang++-21 \
             -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
             -DLLVM_DIR=/usr/lib/llvm-21/lib/cmake/llvm
           cmake --build .foundation-lang/build --target foundationc --parallel 4
@@ -67,6 +68,7 @@ jobs:
       - name: Build Foundation Lang
         run: |
           cmake -S .foundation-lang -B .foundation-lang/build -G Ninja \
+            -DCMAKE_CXX_COMPILER=clang++-21 \
             -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
             -DLLVM_DIR=/usr/lib/llvm-21/lib/cmake/llvm
           cmake --build .foundation-lang/build --target foundationc --parallel 4
@@ -98,6 +100,7 @@ jobs:
       - name: Build Foundation Lang
         run: |
           cmake -S .foundation-lang -B .foundation-lang/build -G Ninja \
+            -DCMAKE_CXX_COMPILER=clang++-21 \
             -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
             -DLLVM_DIR=/usr/lib/llvm-21/lib/cmake/llvm
           cmake --build .foundation-lang/build --target foundationc --parallel 4
@@ -135,6 +138,7 @@ jobs:
       - name: Build Foundation Lang
         run: |
           cmake -S .foundation-lang -B .foundation-lang/build -G Ninja \
+            -DCMAKE_CXX_COMPILER=clang++-21 \
             -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
             -DLLVM_DIR=/usr/lib/llvm-21/lib/cmake/llvm
           cmake --build .foundation-lang/build --target foundationc --parallel 4
@@ -173,6 +177,7 @@ jobs:
       - name: Build Foundation Lang
         run: |
           cmake -S .foundation-lang -B .foundation-lang/build -G Ninja \
+            -DCMAKE_CXX_COMPILER=clang++-21 \
             -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
             -DLLVM_DIR=/usr/lib/llvm-21/lib/cmake/llvm
           cmake --build .foundation-lang/build --target foundationc --parallel 4
