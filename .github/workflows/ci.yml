@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 env:
-  FOUNDATION_LANG_REF: b2ec0c369fcda3d5db2b6ccd0282b89645f6ab95
+  FOUNDATION_LANG_REF: 38e9995eee9061b882d59394617edf9f20940ffb
 
 jobs:
   test:
